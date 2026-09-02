@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Ceased/RMA Turrets - Telephony Management{% endblock %}
+
+{% block header %}Ceased/RMA Turrets{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ url_for('turret_rma_export') }}?{{ request.query_string.decode('utf-8') }}" class="btn btn-sm btn-outline-success">
+        <i class="fas fa-file-excel me-1"></i> Export (Excel)
+    </a>
+    {% if current_user.is_admin() %}
+    <a href="{{ url_for('turret_rma_import') }}" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-upload me-1"></i> Import
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search }}"
+                       placeholder="MAC Address (1-5), IP Address, DNS/Hostname, Zone, Desk Location, Moved By, Issue, Summary...">
+            </div>
+            <div class="col-md-4">
+                <label for="country" class="form-label">Country</label>
+                <select class="form-select" id="country" name="country">
+                    <option value="" {% if not country %}selected{% endif %}>All Countries</option>
+                    {% for c in countries %}
+                    <option value="{{ c }}" {% if country == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Apply</button>
+            </div>
+            <div class="col-12">
+                <a href="{{ url_for('turret_rma_list') }}" class="btn btn-secondary">Clear Filters</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Ceased/RMA Turrets List</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Moved At</th>
+                        <th>Moved By</th>
+                        <th>RMA Sent</th>
+                        <th>RMA Received</th>
+                        <th>Issue</th>
+                        <th>Summary</th>
+                        <th>MAC Address</th>
+                        <th>MAC 2</th>
+                        <th>MAC 3</th>
+                        <th>MAC 4</th>
+                        <th>MAC 5</th>
+                        <th>Serial Number</th>
+                        <th>IP Address</th>
+                        <th>DNS/Hostname</th>
+                        <th>Desk Location</th>
+                        <th>Zone</th>
+                        <th>Model</th>
+                        <th>Firmware</th>
+                        <th>Country</th>
+                        <th>Office</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for turret in turrets.items %}
+                    <tr>
+                        <td>{{ turret.moved_at.strftime('%Y-%m-%d %H:%M') if turret.moved_at else '-' }}</td>
+                        <td>{{ turret.moved_by or '-' }}</td>
+                        <td>{{ turret.rma_date_sent.strftime('%Y-%m-%d') if turret.rma_date_sent else '-' }}</td>
+                        <td>{{ turret.rma_date_received.strftime('%Y-%m-%d') if turret.rma_date_received else '-' }}</td>
+                        <td>{{ turret.dealerboard_issue or '-' }}</td>
+                        <td>{{ turret.summary or '-' }}</td>
+                        <td>{{ turret.mac_address or '-' }}</td>
+                        <td>{{ turret.mac_address_2 or '-' }}</td>
+                        <td>{{ turret.mac_address_3 or '-' }}</td>
+                        <td>{{ turret.mac_address_4 or '-' }}</td>
+                        <td>{{ turret.mac_address_5 or '-' }}</td>
+                        <td>{{ turret.serial_number or '-' }}</td>
+                        <td>{{ turret.ip_address or '-' }}</td>
+                        <td>{{ turret.dns_hostname or '-' }}</td>
+                        <td>{{ turret.desk_location or '-' }}</td>
+                        <td>{{ turret.zone or '-' }}</td>
+                        <td>{{ turret.model or '-' }}</td>
+                        <td>{{ turret.firmware_version or '-' }}</td>
+                        <td>{{ turret.country or '-' }}</td>
+                        <td>{{ turret.office or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if turrets.pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if turrets.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('turret_rma_list', page=turrets.prev_num, search=search, country=country) }}">
+                        Previous
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Previous</a>
+                </li>
+                {% endif %}
+
+                {% for page_num in turrets.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == turrets.page %}
+                        <li class="page-item active">
+                            <a class="page-link" href="#">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('turret_rma_list', page=page_num, search=search, country=country) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">...</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if turrets.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('turret_rma_list', page=turrets.next_num, search=search, country=country) }}">
+                        Next
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+

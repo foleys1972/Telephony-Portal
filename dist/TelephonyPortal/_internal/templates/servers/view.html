@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Server - {{ server.hostname }}{% endblock %}
+
+{% block header %}Server{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ next_url }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back
+    </a>
+    <a href="{{ url_for('servers_edit', id=server.id, next=next_url) }}" class="btn btn-sm btn-primary">
+        <i class="fas fa-edit me-1"></i> Edit
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6"><div class="text-muted small">Hostname</div><div class="h5 mb-0">{{ server.hostname }}</div></div>
+            <div class="col-md-6"><div class="text-muted small">IP Address</div><div class="h5 mb-0">{{ server.ip_address or '' }}</div></div>
+
+            <div class="col-md-4"><div class="text-muted small">Application</div><div>{{ server.application or '' }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Role</div><div>{{ server.role or '' }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Service</div><div>{{ server.service or '' }}</div></div>
+
+            <div class="col-md-4"><div class="text-muted small">DB Server</div><div>{{ server.db_server or '' }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Prod/Dev</div><div>{{ server.prod_dev or '' }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Country</div><div>{{ server.country or '' }}</div></div>
+
+            <div class="col-md-4"><div class="text-muted small">Site</div><div>{{ server.site or '' }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Verint ID</div><div>{{ server.verint_id or '' }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">OS</div><div>{{ server.os or '' }}</div></div>
+
+            <div class="col-md-4"><div class="text-muted small">Status</div><div>{{ server.status or '' }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Hardware</div><div>{{ server.hardware or '' }}</div></div>
+            <div class="col-md-4"><div class="text-muted small">Server Type</div><div>{{ server.server_type or '' }}</div></div>
+
+            <div class="col-md-6"><div class="text-muted small">ESXi Host</div><div>{{ server.esxi_host or '' }}</div></div>
+            <div class="col-md-6"><div class="text-muted small">EOL Date</div><div>{{ server.eol_date.strftime('%Y-%m-%d') if server.eol_date else '' }}</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0">Cease Server</h6>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('servers_cease', id=server.id) }}" class="row g-2 align-items-end">
+            <div class="col-md-10">
+                <label class="form-label">Reason <span class="text-danger">*</span></label>
+                <input class="form-control" name="cease_reason" required>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-danger" type="submit">Cease</button>
+            </div>
+        </form>
+        <div class="form-text">Ceasing will copy this server into Ceased Servers and remove it from Live Servers.</div>
+    </div>
+</div>
+{% endblock %}

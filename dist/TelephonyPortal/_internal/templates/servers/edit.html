@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Server - Telephony Management{% endblock %}
+
+{% block header %}Edit Server{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ next_url }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="card">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Hostname <span class="text-danger">*</span></label>
+                <input class="form-control" name="hostname" value="{{ form.get('hostname','') }}" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">IP Address</label>
+                <input class="form-control" name="ip_address" value="{{ form.get('ip_address','') }}">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Application</label>
+                <select class="form-select" name="application">
+                    <option value=""></option>
+                    {% for v in applications %}
+                    <option value="{{ v }}" {% if form.get('application','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Role</label>
+                <select class="form-select" name="role">
+                    <option value=""></option>
+                    {% for v in roles %}
+                    <option value="{{ v }}" {% if form.get('role','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Service</label>
+                <select class="form-select" name="service">
+                    <option value=""></option>
+                    {% for v in services %}
+                    <option value="{{ v }}" {% if form.get('service','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">DB Server</label>
+                <select class="form-select" name="db_server">
+                    <option value=""></option>
+                    {% for v in db_servers %}
+                    <option value="{{ v }}" {% if form.get('db_server','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Prod/Dev</label>
+                <select class="form-select" name="prod_dev">
+                    <option value=""></option>
+                    {% for v in prod_devs %}
+                    <option value="{{ v }}" {% if form.get('prod_dev','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Country</label>
+                <select class="form-select" name="country">
+                    <option value=""></option>
+                    {% for v in countries %}
+                    <option value="{{ v }}" {% if form.get('country','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Site</label>
+                <select class="form-select" name="site">
+                    <option value=""></option>
+                    {% for v in sites %}
+                    <option value="{{ v }}" {% if form.get('site','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Verint ID</label>
+                <input class="form-control" name="verint_id" value="{{ form.get('verint_id','') }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">OS</label>
+                <select class="form-select" name="os">
+                    <option value=""></option>
+                    {% for v in oses %}
+                    <option value="{{ v }}" {% if form.get('os','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value=""></option>
+                    {% for v in statuses %}
+                    <option value="{{ v }}" {% if form.get('status','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Hardware</label>
+                <select class="form-select" name="hardware">
+                    <option value=""></option>
+                    {% for v in hardwares %}
+                    <option value="{{ v }}" {% if form.get('hardware','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Server Type</label>
+                <select class="form-select" name="server_type">
+                    <option value=""></option>
+                    {% for v in server_types %}
+                    <option value="{{ v }}" {% if form.get('server_type','') == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">ESXi Host</label>
+                <input class="form-control" name="esxi_host" value="{{ form.get('esxi_host','') }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">EOL Date</label>
+                <input class="form-control" type="date" name="eol_date" value="{{ form.get('eol_date','') }}">
+            </div>
+        </div>
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+        <a href="{{ next_url }}" class="btn btn-secondary">Cancel</a>
+        <button class="btn btn-primary" type="submit">Save</button>
+    </div>
+</form>
+{% endblock %}

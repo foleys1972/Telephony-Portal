@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Map Import Fields - Telephony Management{% endblock %}
+
+{% block header %}Map Import Fields{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{{ title }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            <input type="hidden" name="csv_data" value="{{ csv_data }}">
+            <input type="hidden" name="mapping_confirmed" value="1">
+
+            {% if help_text %}
+            <div class="alert alert-info">{{ help_text }}</div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Database Field</th>
+                            <th>CSV Column</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in target_fields %}
+                        <tr>
+                            <td><strong>{{ f.label }}</strong>{% if f.required %} <span class="text-danger">*</span>{% endif %}</td>
+                            <td>
+                                <select class="form-select" name="map__{{ f.key }}">
+                                    <option value="">-- Not Mapped --</option>
+                                    {% for h in csv_headers %}
+                                    <option value="{{ h }}" {% if suggestions.get(f.key) == h %}selected{% endif %}>{{ h }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if preview_rows %}
+            <hr>
+            <h6 class="mb-3">Preview (first {{ preview_rows|length }} rows)</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            {% for h in preview_headers %}
+                            <th>{{ h }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in preview_rows %}
+                        <tr>
+                            {% for h in preview_headers %}
+                            <td>{{ r.get(h,'') }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ cancel_url }}" class="btn btn-secondary me-md-2">Cancel</a>
+                <button type="submit" class="btn btn-primary">Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

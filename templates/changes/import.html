@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Import Changes - Telephony Management{% endblock %}
+
+{% block header %}Import Changes{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Changes from CSV</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Upload a CSV file to import change records. The system will automatically detect and map columns from your CSV file.
+                </p>
+                
+                <p class="text-info">
+                    <i class="fas fa-info-circle"></i>
+                    Existing records (matching CR#) will be updated with new information.
+                </p>
+                
+                <form method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">CSV File</label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".csv" required>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('changes_list') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Import</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

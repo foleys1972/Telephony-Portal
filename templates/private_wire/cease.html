@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Cease Private Wire - Telephony Management{% endblock %}
+
+{% block header %}Cease Private Wire{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">Confirm Cease Private Wire</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action will cease the private wire and mark key fields as "Spare". The original record will be preserved in the ceased wires archive.
+                </div>
+                
+                <h5 class="mb-3">Please confirm the following details:</h5>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Record No:</strong> {{ pw.record_no }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Location:</strong> {{ pw.location }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Current SNOW Ref:</strong> {{ pw.snow_ref or 'None' }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Line Label:</strong> {{ pw.line_label }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Company Name:</strong> {{ pw.company_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>AOR:</strong> {{ pw.aor }}
+                    </div>
+                </div>
+                
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="snow_ref" class="form-label">SNOW Reference <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="snow_ref" name="snow_ref" required>
+                        <small class="form-text text-muted">A valid SNOW reference is required to cease the private wire.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="cease_reason" class="form-label">Reason for Ceasing</label>
+                        <textarea class="form-control" id="cease_reason" name="cease_reason" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('pw_list') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Confirm Cease</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

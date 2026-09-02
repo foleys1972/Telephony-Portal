@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Table: {{ table }} - Admin{% endblock %}
+
+{% block header %}Table: {{ table }}{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ url_for('admin_database') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input class="form-control" name="search" value="{{ search }}" placeholder="Search text columns...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Per page</label>
+                <input class="form-control" type="number" name="per_page" value="{{ per_page }}" min="10" max="200">
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Apply</button>
+                <a class="btn btn-secondary" href="{{ url_for('admin_table_view', table=table) }}">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Rows</h5>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('admin_table_spreadsheet', table=table, search=search, per_page=per_page) }}" class="btn btn-sm btn-success">
+                <i class="fas fa-table me-1"></i> Spreadsheet View
+            </a>
+            <form method="post" action="{{ url_for('admin_delete_all_records', table=table) }}" class="d-flex gap-2 align-items-center"
+                  onsubmit="return confirm('This will delete ALL rows in {{ table }}. This cannot be undone. Continue?');">
+                <input type="text" name="confirm" class="form-control form-control-sm" style="width: 180px;"
+                       placeholder="DELETE {{ table }}">
+                <button class="btn btn-sm btn-danger" type="submit" title="Delete all rows in this table">
+                    <i class="fas fa-trash me-1"></i> Delete All
+                </button>
+            </form>
+            <span class="text-muted">{{ total }} total</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>Actions</th>
+                        {% for c in columns %}
+                        <th><code>{{ c }}</code></th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td class="text-nowrap">
+                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_edit_record', table=table, rowid=r['_rowid_']) }}">Edit</a>
+                            <form method="post" action="{{ url_for('admin_delete_record', table=table, rowid=r['_rowid_']) }}" class="d-inline"
+                                  onsubmit="return confirm('Delete this record?');">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                            </form>
+                        </td>
+                        {% for c in columns %}
+                        <td style="max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {{ r[c] }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pages > 1 %}
+        <nav aria-label="Pagination">
+            <ul class="pagination justify-content-center">
+                {% set qp = request.args.to_dict() %}
+                {% set _ = qp.pop('page', None) %}
+                {% set base_qs = qp|urlencode %}
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin_table_view', table=table) }}?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ page-1 }}">Prev</a>
+                </li>
+                <li class="page-item disabled"><a class="page-link" href="#">Page {{ page }} / {{ pages }}</a></li>
+                <li class="page-item {% if page >= pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin_table_view', table=table) }}?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ page+1 }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+

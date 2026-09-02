@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Import Turrets - Telephony Management{% endblock %}
+
+{% block header %}Import Dealerboard Turrets{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Import Turrets from CSV</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="file" class="form-label">Select CSV File</label>
+                <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                <div class="form-text">
+                    Upload a CSV file containing turret data. The system will guide you through field mapping.
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <h6 class="alert-heading">CSV Format Guidelines:</h6>
+                <ul class="mb-0">
+                    <li>Include headers in the first row</li>
+                    <li>MAC Address is required and must be unique</li>
+                    <li>Common fields: MAC Address (1-5), IP Address, Zone, Model, Firmware Version, Country, Office, Desk Location</li>
+                    <li>The system will automatically detect and suggest field mappings</li>
+                </ul>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload me-1"></i> Upload and Map Fields
+                </button>
+                <a href="{{ url_for('turret_list') }}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="card-title mb-0">Import Process</h6>
+    </div>
+    <div class="card-body">
+        <ol class="mb-0">
+            <li><strong>Upload CSV:</strong> Select your CSV file and upload</li>
+            <li><strong>Map Fields:</strong> Match CSV columns to database fields</li>
+            <li><strong>Preview:</strong> Review the data before importing</li>
+            <li><strong>Import:</strong> Complete the import process</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

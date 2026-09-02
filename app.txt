@@ -1,0 +1,2022 @@
+# app.py - Main Application File for Telephony DDI Management Portal
+# Enhanced with dynamic imports, turret moves, admin database management
+
+from flask import Flask, render_template, request, redirect, url_for, flash, Response, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from datetime import datetime
+import os
+import csv
+import io
+import shutil
+import json
+from functools import wraps
+
+# Initialize the Flask application
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
+
+# Configure database path - use absolute path for reliability
+basedir = os.path.abspath(os.path.dirname(__file__))
+instance_path = os.path.join(basedir, 'instance')
+os.makedirs(instance_path, exist_ok=True)
+
+# Set database URI
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(instance_path, "telephony.db")}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
+
+# Ensure upload directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(os.path.join(basedir, 'backups'), exist_ok=True)
+
+# Initialize database
+db = SQLAlchemy(app)
+
+# Initialize login manager
+login_manager = LoginManager()
+
+# =====================================================================
+# Helper Functions for Feature Detection
+# =====================================================================
+
+def check_table_exists(table_name):
+    """Check if a table exists in the database"""
+    try:
+        result = db.engine.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+        return result.fetchone() is not None
+    except:
+        return False
+
+def has_new_features():
+    """Check if the database has been migrated with new features"""
+    return True  # Tables exist, migration is complete
+
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# =====================================================================
+# Database Models - Enhanced with new features
+# =====================================================================
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='user')
+    active = db.Column(db.Boolean, default=True)
+    last_login = db.Column(db.DateTime)
+    created_date = db.Column(db.DateTime, default=datetime.utcnow)
+    ceased_date = db.Column(db.DateTime, nullable=True)
+    ceased_by = db.Column(db.String(100), nullable=True)
+    cease_reason = db.Column(db.String(200), nullable=True)
+    
+    def is_admin(self):
+        return self.role == 'admin'
+    
+    def is_active(self):
+        return self.active
+    
+    def update_last_login(self):
+        self.last_login = datetime.utcnow()
+        db.session.commit()
+
+class DDINumber(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ddi_number = db.Column(db.String(12), unique=True, nullable=False)
+    username = db.Column(db.String(100))
+    line_type = db.Column(db.String(50))
+    cisco_cluster = db.Column(db.String(100))
+    tpo_dns_name = db.Column(db.String(100))
+    voice_recording = db.Column(db.String(10))
+    place = db.Column(db.String(100))
+    slots = db.Column(db.String(50))
+    virtual_slot_start = db.Column(db.String(50))
+    virtual_slot_stop = db.Column(db.String(50))
+    bt_system = db.Column(db.String(50))
+    location = db.Column(db.String(50))
+    status = db.Column(db.String(20), default='Active')
+    date_spare = db.Column(db.DateTime, nullable=True)
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    last_change = db.Column(db.String(200))
+
+class PrivateWire(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    record_no = db.Column(db.String(50), unique=True)
+    location = db.Column(db.String(50))
+    dc_locale = db.Column(db.String(100))
+    vega_port = db.Column(db.String(50))
+    channel = db.Column(db.String(50))
+    bearer_no = db.Column(db.String(50))
+    circuit_no = db.Column(db.String(50))
+    back_up_bearer = db.Column(db.String(100))
+    cluster_name = db.Column(db.String(100))
+    tpo_name = db.Column(db.String(100))
+    vega_hostname = db.Column(db.String(100))
+    back_up_vega_gw = db.Column(db.String(100))
+    vendor = db.Column(db.String(100))
+    pw_type = db.Column(db.String(50))
+    btt_slot = db.Column(db.String(50))
+    aor = db.Column(db.String(50))
+    a_or_b = db.Column(db.String(10))
+    dedicated_country = db.Column(db.String(50))
+    hsbc_main_user = db.Column(db.String(100))
+    employee_id = db.Column(db.String(50))
+    private_public = db.Column(db.String(20))
+    line_label = db.Column(db.String(100))
+    company_name = db.Column(db.String(100))
+    company_contact = db.Column(db.String(100))
+    company_email = db.Column(db.String(100))
+    vr_yn = db.Column(db.String(10))
+    snow_ref = db.Column(db.String(50))
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    last_change = db.Column(db.String(200))
+
+class DealerboardTurret(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    mac_address = db.Column(db.String(50), unique=True)
+    ip_address = db.Column(db.String(50))
+    zone = db.Column(db.String(50))
+    firmware_version = db.Column(db.String(50))
+    model = db.Column(db.String(50))
+    country = db.Column(db.String(50))
+    office = db.Column(db.String(100))
+    desk_location = db.Column(db.String(100))
+    switch_port_1 = db.Column(db.String(100))
+    switch_port_2 = db.Column(db.String(100))
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    last_change = db.Column(db.String(200))
+
+class TurretMove(db.Model):
+    """Track turret move plans and execution"""
+    id = db.Column(db.Integer, primary_key=True)
+    turret_id = db.Column(db.Integer, db.ForeignKey('dealerboard_turret.id'), nullable=False)
+    current_desk = db.Column(db.String(100), nullable=False)
+    new_desk = db.Column(db.String(100), nullable=False)
+    planned_date = db.Column(db.DateTime, nullable=False)
+    actual_date = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(20), default='Planned')  # Planned, In Progress, Completed, Cancelled
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.String(100), nullable=False)
+    completed_by = db.Column(db.String(100), nullable=True)
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    turret = db.relationship('DealerboardTurret', backref='moves')
+
+class CeasedPrivateWire(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    original_record_no = db.Column(db.String(50))
+    record_no = db.Column(db.String(50))
+    location = db.Column(db.String(50))
+    dc_locale = db.Column(db.String(100))
+    vega_port = db.Column(db.String(50))
+    channel = db.Column(db.String(50))
+    bearer_no = db.Column(db.String(50))
+    circuit_no = db.Column(db.String(50))
+    back_up_bearer = db.Column(db.String(100))
+    cluster_name = db.Column(db.String(100))
+    tpo_name = db.Column(db.String(100))
+    vega_hostname = db.Column(db.String(100))
+    back_up_vega_gw = db.Column(db.String(100))
+    vendor = db.Column(db.String(100))
+    pw_type = db.Column(db.String(50))
+    btt_slot = db.Column(db.String(50))
+    aor = db.Column(db.String(50))
+    a_or_b = db.Column(db.String(10))
+    dedicated_country = db.Column(db.String(50))
+    hsbc_main_user = db.Column(db.String(100))
+    employee_id = db.Column(db.String(50))
+    private_public = db.Column(db.String(20))
+    line_label = db.Column(db.String(100))
+    company_name = db.Column(db.String(100))
+    company_contact = db.Column(db.String(100))
+    company_email = db.Column(db.String(100))
+    vr_yn = db.Column(db.String(10))
+    snow_ref = db.Column(db.String(50))
+    cease_date = db.Column(db.DateTime, default=datetime.utcnow)
+    ceased_by = db.Column(db.String(100))
+    cease_reason = db.Column(db.String(200))
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    last_change = db.Column(db.String(200))
+
+class ImportTemplate(db.Model):
+    """Store field mapping templates for imports"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    entity_type = db.Column(db.String(50), nullable=False)  # 'ddi', 'private_wire', 'turret'
+    field_mappings = db.Column(db.Text, nullable=False)  # JSON string of field mappings
+    created_by = db.Column(db.String(100), nullable=False)
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used = db.Column(db.DateTime)
+    
+    def get_mappings(self):
+        return json.loads(self.field_mappings)
+    
+    def set_mappings(self, mappings):
+        self.field_mappings = json.dumps(mappings)
+
+class AuditLog(db.Model):
+    """Track all changes to critical data"""
+    id = db.Column(db.Integer, primary_key=True)
+    table_name = db.Column(db.String(50), nullable=False)
+    record_id = db.Column(db.Integer, nullable=False)
+    action = db.Column(db.String(20), nullable=False)  # CREATE, UPDATE, DELETE
+    old_values = db.Column(db.Text)
+    new_values = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(45))
+    
+    user = db.relationship('User', backref='audit_logs')
+
+# =====================================================================
+# Helper Functions
+# =====================================================================
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin():
+            flash('Admin access required.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_bt_systems():
+    return ['UK', 'REM', 'France', 'Germany', 'Turkey', 'Hong Kong', 'NEA', 'SEA', 
+            'Korea', 'Indonesia', 'India', 'Americas', 'China']
+
+def get_locations():
+    return ['UK', 'Spain', 'Czech Rep', 'Poland', 'Italy', 'Israel', 'France', 
+            'Germany', 'Turkey', 'Hong Kong', 'Japan', 'Taiwan', 'Singapore', 
+            'Philippines', 'Malaysia', 'Thailand', 'Korea', 'Indonesia', 'India', 
+            'USA', 'Mexico', 'Chile', 'Brazil', 'China']
+
+def get_oldest_spare_number(location):
+    """Get the oldest spare number from the specified location"""
+    spare = DDINumber.query.filter_by(
+        status='Spare', 
+        location=location
+    ).order_by(DDINumber.date_spare).first()
+    
+    return spare
+
+def search_all_string_columns(model, search_term):
+    """Create a filter that searches across all string columns of a model."""
+    search_conditions = []
+    for column in model.__table__.columns:
+        if isinstance(column.type, db.String):
+            search_conditions.append(column.like(f'%{search_term}%'))
+    return db.or_(*search_conditions)
+
+# =====================================================================
+# Import Helper Functions
+# =====================================================================
+
+def get_expected_fields(entity_type):
+    """Get expected field names for each entity type"""
+    if entity_type == 'ddi':
+        return [
+            'ddi_number', 'username', 'line_type', 'cisco_cluster', 'tpo_dns_name',
+            'voice_recording', 'place', 'slots', 'virtual_slot_start', 'virtual_slot_stop',
+            'bt_system', 'location', 'status'
+        ]
+    elif entity_type == 'private_wire':
+        return [
+            'record_no', 'location', 'dc_locale', 'vega_port', 'channel', 'bearer_no',
+            'circuit_no', 'back_up_bearer', 'cluster_name', 'tpo_name', 'vega_hostname',
+            'back_up_vega_gw', 'vendor', 'pw_type', 'btt_slot', 'aor', 'a_or_b',
+            'dedicated_country', 'hsbc_main_user', 'employee_id', 'private_public',
+            'line_label', 'company_name', 'company_contact', 'company_email', 'vr_yn', 'snow_ref'
+        ]
+    elif entity_type == 'turret':
+        return [
+            'mac_address', 'ip_address', 'zone', 'firmware_version', 'model',
+            'country', 'office', 'desk_location', 'switch_port_1', 'switch_port_2'
+        ]
+    return []
+
+def get_required_fields(entity_type):
+    """Get required field names for each entity type"""
+    if entity_type == 'ddi':
+        return ['ddi_number']
+    elif entity_type == 'private_wire':
+        return ['record_no']
+    elif entity_type == 'turret':
+        return ['mac_address']
+    return []
+
+def suggest_field_mappings(csv_headers, expected_fields):
+    """Suggest field mappings based on header similarity"""
+    mappings = {}
+    
+    # Clean headers for comparison
+    clean_headers = {header.lower().replace(' ', '_').replace('-', '_'): header for header in csv_headers}
+    
+    for field in expected_fields:
+        # Direct match
+        if field in clean_headers:
+            mappings[field] = clean_headers[field]
+            continue
+        
+        # Partial matches
+        field_lower = field.lower()
+        for clean_header, original_header in clean_headers.items():
+            if field_lower in clean_header or clean_header in field_lower:
+                mappings[field] = original_header
+                break
+        
+        # Special cases
+        if field == 'mac_address' and 'name' in clean_headers:
+            mappings[field] = clean_headers['name']
+        elif field == 'ip_address' and 'ipaddress' in clean_headers:
+            mappings[field] = clean_headers['ipaddress']
+        elif field == 'firmware_version' and 'firmwareversion' in clean_headers:
+            mappings[field] = clean_headers['firmwareversion']
+    
+    return mappings
+
+def process_import_data(entity_type, file_path, encoding, field_mappings):
+    """Process import data for any entity type"""
+    results = {'added': 0, 'updated': 0, 'skipped': 0}
+    
+    with open(file_path, 'r', encoding=encoding) as f:
+        reader = csv.DictReader(f)
+        
+        for row in reader:
+            try:
+                if entity_type == 'ddi':
+                    results = process_ddi_row(row, field_mappings, results)
+                elif entity_type == 'private_wire':
+                    results = process_pw_row(row, field_mappings, results)
+                elif entity_type == 'turret':
+                    results = process_turret_row(row, field_mappings, results)
+            except Exception as e:
+                print(f"Error processing row: {e}")
+                results['skipped'] += 1
+                continue
+    
+    db.session.commit()
+    return results
+
+def process_ddi_row(row, field_mappings, results):
+    """Process a single DDI row - FIXED to always process records"""
+    # Get DDI number
+    ddi_field = field_mappings.get('ddi_number')
+    if not ddi_field or ddi_field not in row:
+        results['skipped'] += 1
+        return results
+    
+    ddi_number = row[ddi_field].strip()
+    
+    # Validate DDI format
+    if not (ddi_number.startswith('6') and len(ddi_number) == 12 and ddi_number.isdigit()):
+        results['skipped'] += 1
+        return results
+    
+    # Check if exists
+    existing = DDINumber.query.filter_by(ddi_number=ddi_number).first()
+    
+    # Create data dictionary
+    data = {}
+    for db_field, csv_field in field_mappings.items():
+        if csv_field in row and row[csv_field].strip():
+            data[db_field] = row[csv_field].strip()
+    
+    if existing:
+        # FIXED: Always update existing records, don't skip
+        updated_fields = []
+        for field, value in data.items():
+            if field != 'ddi_number':
+                old_value = getattr(existing, field)
+                if str(old_value) != str(value):  # Only update if different
+                    setattr(existing, field, value)
+                    updated_fields.append(field)
+        
+        if updated_fields:
+            existing.last_updated = datetime.utcnow()
+            existing.last_change = f'Updated from import by {current_user.username} - fields: {", ".join(updated_fields)}'
+            results['updated'] += 1
+        else:
+            # Even if no changes, count as processed (not skipped)
+            results['updated'] += 1
+    else:
+        # Create new record
+        new_ddi = DDINumber(
+            last_change=f'Added from import by {current_user.username}',
+            **data
+        )
+        if 'status' not in data:
+            new_ddi.status = 'Active'
+        db.session.add(new_ddi)
+        results['added'] += 1
+    
+    return results
+
+def process_pw_row(row, field_mappings, results):
+    """Process a single Private Wire row - FIXED to always process records"""
+    # Get record number
+    record_field = field_mappings.get('record_no')
+    if not record_field or record_field not in row:
+        results['skipped'] += 1
+        return results
+    
+    record_no = row[record_field].strip()
+    if not record_no:
+        results['skipped'] += 1
+        return results
+    
+    # Check if exists
+    existing = PrivateWire.query.filter_by(record_no=record_no).first()
+    
+    # Create data dictionary
+    data = {}
+    for db_field, csv_field in field_mappings.items():
+        if csv_field in row and row[csv_field].strip():
+            data[db_field] = row[csv_field].strip()
+    
+    if existing:
+        # FIXED: Always update existing records, don't skip
+        updated_fields = []
+        for field, value in data.items():
+            old_value = getattr(existing, field)
+            if str(old_value) != str(value):  # Only update if different
+                setattr(existing, field, value)
+                updated_fields.append(field)
+        
+        if updated_fields:
+            existing.last_updated = datetime.utcnow()
+            existing.last_change = f'Updated from import by {current_user.username} - fields: {", ".join(updated_fields)}'
+            results['updated'] += 1
+        else:
+            # Even if no changes, count as processed (not skipped)
+            results['updated'] += 1
+    else:
+        # Create new record
+        new_pw = PrivateWire(
+            last_change=f'Added from import by {current_user.username}',
+            **data
+        )
+        db.session.add(new_pw)
+        results['added'] += 1
+    
+    return results
+
+def process_turret_row(row, field_mappings, results):
+    """Process a single Turret row - FIXED to always process records"""
+    # Get MAC address
+    mac_field = field_mappings.get('mac_address')
+    if not mac_field or mac_field not in row:
+        results['skipped'] += 1
+        return results
+    
+    mac_address = row[mac_field].strip()
+    if not mac_address:
+        results['skipped'] += 1
+        return results
+    
+    # Check if exists
+    existing = DealerboardTurret.query.filter_by(mac_address=mac_address).first()
+    
+    # Create data dictionary
+    data = {}
+    for db_field, csv_field in field_mappings.items():
+        if csv_field in row and row[csv_field].strip():
+            data[db_field] = row[csv_field].strip()
+    
+    if existing:
+        # FIXED: Always update existing records, don't skip
+        updated_fields = []
+        for field, value in data.items():
+            old_value = getattr(existing, field)
+            if str(old_value) != str(value):  # Only update if different
+                setattr(existing, field, value)
+                updated_fields.append(field)
+        
+        if updated_fields:
+            existing.last_updated = datetime.utcnow()
+            existing.last_change = f'Updated from import by {current_user.username} - fields: {", ".join(updated_fields)}'
+            results['updated'] += 1
+        else:
+            # Even if no changes, count as processed (not skipped)
+            results['updated'] += 1
+    else:
+        # Create new record
+        new_turret = DealerboardTurret(
+            last_change=f'Added from import by {current_user.username}',
+            **data
+        )
+        db.session.add(new_turret)
+        results['added'] += 1
+    
+    return results
+
+def save_import_template(entity_type, template_name, field_mappings):
+    """Save import template for future use"""
+    # Check if template name already exists
+    existing = ImportTemplate.query.filter_by(
+        name=template_name, 
+        entity_type=entity_type
+    ).first()
+    
+    if existing:
+        existing.set_mappings(field_mappings)
+        existing.last_used = datetime.utcnow()
+    else:
+        template = ImportTemplate(
+            name=template_name,
+            entity_type=entity_type,
+            created_by=current_user.username
+        )
+        template.set_mappings(field_mappings)
+        db.session.add(template)
+    
+    db.session.commit()
+
+# =====================================================================
+# Context Processor
+# =====================================================================
+
+@app.context_processor
+def inject_template_vars():
+    """Inject common variables into all templates"""
+    try:
+        if current_user.is_authenticated:
+            has_new_features_flag = has_new_features()
+            pending_moves = 0
+            
+            if has_new_features_flag:
+                try:
+                    result = db.engine.execute("SELECT COUNT(*) FROM turret_move WHERE status='Planned'")
+                    pending_moves = result.fetchone()[0]
+                except:
+                    pending_moves = 0
+            
+            return {
+                'has_new_features': has_new_features_flag,
+                'pending_moves': pending_moves
+            }
+    except:
+        pass
+    return {'has_new_features': False, 'pending_moves': 0}
+
+# =====================================================================
+# Routes - Authentication
+# =====================================================================
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and check_password_hash(user.password, password):
+            if not user.active:
+                flash('This account has been disabled. Please contact an administrator.', 'danger')
+                return render_template('login.html')
+                
+            login_user(user)
+            user.update_last_login()
+            flash('Login successful!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'danger')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
+
+# =====================================================================
+# Routes - User Management
+# =====================================================================
+
+@app.route('/admin/users')
+@login_required
+@admin_required
+def manage_users():
+    users = User.query.all()
+    return render_template('admin/users.html', users=users, current_user=current_user)
+
+@app.route('/admin/users/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_user():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        role = request.form.get('role')
+        
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists', 'danger')
+            return redirect(url_for('add_user'))
+        
+        hashed_password = generate_password_hash(password)
+        new_user = User(username=username, password=hashed_password, role=role)
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        flash('User added successfully', 'success')
+        return redirect(url_for('manage_users'))
+    
+    return render_template('admin/add_user.html')
+
+@app.route('/admin/users/toggle-status/<int:id>')
+@login_required
+@admin_required
+def toggle_user_status(id):
+    user = User.query.get_or_404(id)
+    
+    if user.id == current_user.id:
+        flash('You cannot disable your own account', 'warning')
+        return redirect(url_for('manage_users'))
+    
+    user.active = not user.active
+    action = 'enabled' if user.active else 'disabled'
+    
+    db.session.commit()
+    flash(f'User {user.username} has been {action}', 'success')
+    return redirect(url_for('manage_users'))
+
+@app.route('/admin/users/cease/<int:id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def cease_user(id):
+    user = User.query.get_or_404(id)
+    
+    if user.id == current_user.id:
+        flash('You cannot cease your own account', 'warning')
+        return redirect(url_for('manage_users'))
+    
+    if request.method == 'POST':
+        user.active = False
+        user.ceased_date = datetime.utcnow()
+        user.ceased_by = current_user.username
+        user.cease_reason = request.form.get('cease_reason', '')
+        
+        db.session.commit()
+        flash(f'User {user.username} has been ceased', 'success')
+        return redirect(url_for('manage_users'))
+    
+    return render_template('admin/cease_user.html', user=user)
+
+@app.route('/admin/users/delete/<int:id>')
+@login_required
+@admin_required
+def delete_user(id):
+    user = User.query.get_or_404(id)
+    
+    if user.id == current_user.id:
+        flash('You cannot delete your own account', 'warning')
+        return redirect(url_for('manage_users'))
+    
+    username = user.username
+    db.session.delete(user)
+    db.session.commit()
+    
+    flash(f'User {username} has been deleted', 'success')
+    return redirect(url_for('manage_users'))
+
+# =====================================================================
+# Routes - Main pages
+# =====================================================================
+
+@app.route('/')
+@login_required
+def index():
+    ddi_count = DDINumber.query.count()
+    spare_count = DDINumber.query.filter_by(status='Spare').count()
+    pw_count = PrivateWire.query.count()
+    turret_count = DealerboardTurret.query.count()
+    return render_template('index.html', 
+                          ddi_count=ddi_count,
+                          spare_count=spare_count,
+                          pw_count=pw_count,
+                          turret_count=turret_count)
+
+# =====================================================================
+# Routes - DDI Number Management
+# =====================================================================
+
+@app.route('/ddi')
+@login_required
+def ddi_list():
+    page = request.args.get('page', 1, type=int)
+    query = DDINumber.query
+    
+    # Filter by search term
+    search = request.args.get('search', '')
+    if search:
+        query = query.filter(search_all_string_columns(DDINumber, search))
+    
+    # Filter by status
+    status = request.args.get('status', '')
+    if status:
+        query = query.filter_by(status=status)
+    
+    # Filter by location
+    location = request.args.get('location', '')
+    if location:
+        query = query.filter_by(location=location)
+    
+    # Filter by bt_system
+    bt_system = request.args.get('bt_system', '')
+    if bt_system:
+        query = query.filter_by(bt_system=bt_system)
+    
+    # Order by
+    sort = request.args.get('sort', 'ddi_number')
+    order = request.args.get('order', 'asc')
+    
+    if order == 'desc':
+        query = query.order_by(getattr(DDINumber, sort).desc())
+    else:
+        query = query.order_by(getattr(DDINumber, sort))
+    
+    ddi_numbers = query.paginate(page=page, per_page=20)
+    
+    return render_template('ddi/list.html',
+                          ddi_numbers=ddi_numbers,
+                          search=search,
+                          status=status,
+                          location=location,
+                          bt_system=bt_system,
+                          sort=sort,
+                          order=order,
+                          locations=get_locations(),
+                          bt_systems=get_bt_systems(),
+                          has_new_features=has_new_features())
+
+@app.route('/ddi/add', methods=['GET', 'POST'])
+@login_required
+def ddi_add():
+    if request.method == 'POST':
+        ddi_number = request.form.get('ddi_number')
+        username = request.form.get('username')
+        line_type = request.form.get('line_type')
+        cisco_cluster = request.form.get('cisco_cluster')
+        tpo_dns_name = request.form.get('tpo_dns_name')
+        voice_recording = request.form.get('voice_recording')
+        place = request.form.get('place')
+        slots = request.form.get('slots')
+        virtual_slot_start = request.form.get('virtual_slot_start')
+        virtual_slot_stop = request.form.get('virtual_slot_stop')
+        bt_system = request.form.get('bt_system')
+        location = request.form.get('location')
+        status = request.form.get('status')
+        
+        # Validate DDI number format
+        if not (ddi_number.startswith('6') and len(ddi_number) == 12 and ddi_number.isdigit()):
+            flash('DDI number must start with 6 and have 12 digits', 'danger')
+            return redirect(url_for('ddi_add'))
+        
+        # Check if DDI already exists
+        if DDINumber.query.filter_by(ddi_number=ddi_number).first():
+            flash('DDI number already exists', 'danger')
+            return redirect(url_for('ddi_add'))
+        
+        new_ddi = DDINumber(
+            ddi_number=ddi_number,
+            username=username,
+            line_type=line_type,
+            cisco_cluster=cisco_cluster,
+            tpo_dns_name=tpo_dns_name,
+            voice_recording=voice_recording,
+            place=place,
+            slots=slots,
+            virtual_slot_start=virtual_slot_start,
+            virtual_slot_stop=virtual_slot_stop,
+            bt_system=bt_system,
+            location=location,
+            status=status,
+            date_spare=datetime.utcnow() if status == 'Spare' else None,
+            last_change='Initial creation'
+        )
+        
+        db.session.add(new_ddi)
+        db.session.commit()
+        
+        flash('DDI number added successfully', 'success')
+        return redirect(url_for('ddi_list'))
+    
+    return render_template('ddi/add.html', 
+                          locations=get_locations(),
+                          bt_systems=get_bt_systems())
+
+@app.route('/ddi/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def ddi_edit(id):
+    ddi = DDINumber.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        old_status = ddi.status
+        
+        ddi.username = request.form.get('username')
+        ddi.line_type = request.form.get('line_type')
+        ddi.cisco_cluster = request.form.get('cisco_cluster')
+        ddi.tpo_dns_name = request.form.get('tpo_dns_name')
+        ddi.voice_recording = request.form.get('voice_recording')
+        ddi.place = request.form.get('place')
+        ddi.slots = request.form.get('slots')
+        ddi.virtual_slot_start = request.form.get('virtual_slot_start')
+        ddi.virtual_slot_stop = request.form.get('virtual_slot_stop')
+        ddi.bt_system = request.form.get('bt_system')
+        ddi.location = request.form.get('location')
+        ddi.status = request.form.get('status')
+        
+        # If status changed to Spare, update date_spare
+        if old_status != 'Spare' and ddi.status == 'Spare':
+            ddi.date_spare = datetime.utcnow()
+        
+        # If status changed from Spare to Active, clear date_spare
+        if old_status == 'Spare' and ddi.status != 'Spare':
+            ddi.date_spare = None
+        
+        ddi.last_updated = datetime.utcnow()
+        ddi.last_change = f'Updated by {current_user.username}'
+        
+        db.session.commit()
+        
+        flash('DDI number updated successfully', 'success')
+        return redirect(url_for('ddi_list'))
+    
+    return render_template('ddi/edit.html', 
+                          ddi=ddi,
+                          locations=get_locations(),
+                          bt_systems=get_bt_systems())
+
+@app.route('/ddi/request_spare', methods=['GET', 'POST'])
+@login_required
+def ddi_request_spare():
+    if request.method == 'POST':
+        location = request.form.get('location')
+        
+        spare_number = get_oldest_spare_number(location)
+        
+        if not spare_number:
+            flash(f'No spare numbers available for location: {location}', 'warning')
+            return redirect(url_for('ddi_request_spare'))
+        
+        # Change status to Active
+        spare_number.status = 'Active'
+        spare_number.username = request.form.get('username')
+        spare_number.cisco_cluster = request.form.get('cisco_cluster')
+        spare_number.date_spare = None
+        spare_number.last_updated = datetime.utcnow()
+        spare_number.last_change = f'Assigned from spare pool by {current_user.username}'
+        
+        db.session.commit()
+        
+        flash(f'DDI number {spare_number.ddi_number} assigned successfully', 'success')
+        return redirect(url_for('ddi_list'))
+    
+    return render_template('ddi/request_spare.html', locations=get_locations())
+
+@app.route('/ddi/export')
+@login_required
+def ddi_export():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'DDI Number', 'Username', 'Line Type', 'Cisco Cluster', 'TPO DNS Name',
+        'Voice Recording', 'Place', 'Slots', 'Virtual Slot Start', 'Virtual Slot Stop',
+        'BT System', 'Location', 'Status', 'Date Spare', 'Date Created', 
+        'Last Updated', 'Last Change'
+    ])
+    
+    # Query all DDI numbers
+    ddi_numbers = DDINumber.query.all()
+    
+    # Write data
+    for ddi in ddi_numbers:
+        writer.writerow([
+            ddi.ddi_number, ddi.username, ddi.line_type, ddi.cisco_cluster,
+            ddi.tpo_dns_name, ddi.voice_recording, ddi.place, ddi.slots,
+            ddi.virtual_slot_start, ddi.virtual_slot_stop, ddi.bt_system,
+            ddi.location, ddi.status,
+            ddi.date_spare.strftime('%Y-%m-%d %H:%M:%S') if ddi.date_spare else '',
+            ddi.date_created.strftime('%Y-%m-%d %H:%M:%S'),
+            ddi.last_updated.strftime('%Y-%m-%d %H:%M:%S'),
+            ddi.last_change
+        ])
+    
+    output.seek(0)
+    csv_data = output.getvalue()
+    
+    return Response(
+        csv_data,
+        mimetype='text/csv',
+        headers={"Content-Disposition": "attachment;filename=ddi_numbers.csv"}
+    )
+
+# =====================================================================
+# Routes - Private Wire Management
+# =====================================================================
+
+@app.route('/private-wire')
+@login_required
+def pw_list():
+    """Private Wire list page"""
+    page = request.args.get('page', 1, type=int)
+    query = PrivateWire.query
+    
+    # Filter by search term
+    search = request.args.get('search', '')
+    if search:
+        query = query.filter(search_all_string_columns(PrivateWire, search))
+    
+    # Order by
+    sort = request.args.get('sort', 'record_no')
+    order = request.args.get('order', 'asc')
+    
+    if order == 'desc':
+        query = query.order_by(getattr(PrivateWire, sort).desc())
+    else:
+        query = query.order_by(getattr(PrivateWire, sort))
+    
+    private_wires = query.paginate(page=page, per_page=20)
+    
+    return render_template('private_wire/list.html',
+                      private_wires=private_wires,
+                      search=search,
+                      sort=sort,
+                      order=order)
+
+@app.route('/private-wire/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def pw_add():
+    """Add new private wire"""
+    if request.method == 'POST':
+        record_no = request.form.get('record_no')
+        
+        # Check if record already exists
+        if PrivateWire.query.filter_by(record_no=record_no).first():
+            flash('Record number already exists', 'danger')
+            return redirect(url_for('pw_add'))
+        
+        new_pw = PrivateWire(
+            record_no=record_no,
+            location=request.form.get('location'),
+            dc_locale=request.form.get('dc_locale'),
+            vega_port=request.form.get('vega_port'),
+            channel=request.form.get('channel'),
+            bearer_no=request.form.get('bearer_no'),
+            circuit_no=request.form.get('circuit_no'),
+            back_up_bearer=request.form.get('back_up_bearer'),
+            cluster_name=request.form.get('cluster_name'),
+            tpo_name=request.form.get('tpo_name'),
+            vega_hostname=request.form.get('vega_hostname'),
+            back_up_vega_gw=request.form.get('back_up_vega_gw'),
+            vendor=request.form.get('vendor'),
+            pw_type=request.form.get('pw_type'),
+            btt_slot=request.form.get('btt_slot'),
+            aor=request.form.get('aor'),
+            a_or_b=request.form.get('a_or_b'),
+            dedicated_country=request.form.get('dedicated_country'),
+            hsbc_main_user=request.form.get('hsbc_main_user'),
+            employee_id=request.form.get('employee_id'),
+            private_public=request.form.get('private_public'),
+            line_label=request.form.get('line_label'),
+            company_name=request.form.get('company_name'),
+            company_contact=request.form.get('company_contact'),
+            company_email=request.form.get('company_email'),
+            vr_yn=request.form.get('vr_yn'),
+            snow_ref=request.form.get('snow_ref'),
+            last_change='Initial creation'
+        )
+        
+        db.session.add(new_pw)
+        db.session.commit()
+        
+        flash('Private wire added successfully', 'success')
+        return redirect(url_for('pw_list'))
+    
+    return render_template('private_wire/add.html', locations=get_locations())
+
+@app.route('/private-wire/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def pw_edit(id):
+    """Edit private wire"""
+    pw = PrivateWire.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        # Editable fields for regular users
+        pw.pw_type = request.form.get('pw_type')
+        pw.a_or_b = request.form.get('a_or_b')
+        pw.dedicated_country = request.form.get('dedicated_country')
+        pw.hsbc_main_user = request.form.get('hsbc_main_user')
+        pw.employee_id = request.form.get('employee_id')
+        pw.private_public = request.form.get('private_public')
+        pw.line_label = request.form.get('line_label')
+        pw.company_name = request.form.get('company_name')
+        pw.company_contact = request.form.get('company_contact')
+        pw.company_email = request.form.get('company_email')
+        pw.vr_yn = request.form.get('vr_yn')
+        pw.snow_ref = request.form.get('snow_ref')
+        
+        pw.last_updated = datetime.utcnow()
+        pw.last_change = f'Updated by {current_user.username}'
+        
+        db.session.commit()
+        
+        flash('Private wire updated successfully', 'success')
+        return redirect(url_for('pw_list'))
+    
+    return render_template('private_wire/edit.html', 
+                          pw=pw, 
+                          is_admin=current_user.is_admin(),
+                          locations=get_locations())
+
+@app.route('/private-wire/cease/<int:id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def pw_cease(id):
+    """Cease a private wire - copy to ceased table and update live record to spare"""
+    pw = PrivateWire.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        cease_reason = request.form.get('cease_reason', '')
+        
+        # Create ceased record (copy of original)
+        ceased_pw = CeasedPrivateWire(
+            original_record_no=pw.record_no,
+            record_no=pw.record_no,
+            location=pw.location,
+            dc_locale=pw.dc_locale,
+            vega_port=pw.vega_port,
+            channel=pw.channel,
+            bearer_no=pw.bearer_no,
+            circuit_no=pw.circuit_no,
+            back_up_bearer=pw.back_up_bearer,
+            cluster_name=pw.cluster_name,
+            tpo_name=pw.tpo_name,
+            vega_hostname=pw.vega_hostname,
+            back_up_vega_gw=pw.back_up_vega_gw,
+            vendor=pw.vendor,
+            pw_type=pw.pw_type,
+            btt_slot=pw.btt_slot,
+            aor=pw.aor,
+            a_or_b=pw.a_or_b,
+            dedicated_country=pw.dedicated_country,
+            hsbc_main_user=pw.hsbc_main_user,
+            employee_id=pw.employee_id,
+            private_public=pw.private_public,
+            line_label=pw.line_label,
+            company_name=pw.company_name,
+            company_contact=pw.company_contact,
+            company_email=pw.company_email,
+            vr_yn=pw.vr_yn,
+            snow_ref=pw.snow_ref,
+            cease_date=datetime.utcnow(),
+            ceased_by=current_user.username,
+            cease_reason=cease_reason,
+            date_created=pw.date_created,
+            last_change=f'Ceased by {current_user.username}'
+        )
+        
+        # Update live record to spare (keep record but mark as spare)
+        pw.circuit_no = 'SPARE'
+        pw.hsbc_main_user = 'SPARE'
+        pw.company_name = 'SPARE'
+        pw.last_updated = datetime.utcnow()
+        pw.last_change = f'Ceased by {current_user.username} - converted to spare'
+        
+        # Add ceased record and update live record
+        db.session.add(ceased_pw)
+        db.session.commit()
+        
+        flash(f'Private wire {pw.record_no} has been ceased and converted to spare', 'success')
+        return redirect(url_for('pw_list'))
+    
+    return render_template('private_wire/cease.html', pw=pw)
+@app.route('/private-wire/export')
+@login_required
+def pw_export():
+    """Export private wires to CSV"""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'Record No', 'Location', 'DC Locale', 'Vega Port', 'Channel', 'Bearer No', 
+        'Circuit No', 'Back up Bearer', 'Cluster Name', 'TPO Name', 'Vega Hostname', 
+        'Back up Vega GW', 'Vendor', 'PW type', 'BTT slot', 'AOR', 'A or B', 
+        'Dedicated Country', 'HSBC Main User', 'Employee ID', 'Private / Public', 
+        'Line Label', 'Company name', 'Company Contact', 'Company email', 'VR Y / N', 
+        'SNOW Ref', 'Last Updated', 'Last Change'
+    ])
+    
+    # Query all Private Wires
+    private_wires = PrivateWire.query.all()
+    
+    # Write data
+    for pw in private_wires:
+        writer.writerow([
+            pw.record_no, pw.location, pw.dc_locale, pw.vega_port, pw.channel, 
+            pw.bearer_no, pw.circuit_no, pw.back_up_bearer, pw.cluster_name, 
+            pw.tpo_name, pw.vega_hostname, pw.back_up_vega_gw, pw.vendor, 
+            pw.pw_type, pw.btt_slot, pw.aor, pw.a_or_b, pw.dedicated_country, 
+            pw.hsbc_main_user, pw.employee_id, pw.private_public, pw.line_label, 
+            pw.company_name, pw.company_contact, pw.company_email, pw.vr_yn, 
+            pw.snow_ref, pw.last_updated.strftime('%Y-%m-%d %H:%M:%S'), pw.last_change
+        ])
+    
+    output.seek(0)
+    csv_data = output.getvalue()
+    
+    return Response(
+        csv_data,
+        mimetype='text/csv',
+        headers={"Content-Disposition": "attachment;filename=private_wires.csv"}
+    )
+
+@app.route('/ceased-wires')
+@login_required
+def ceased_wires_list():
+    """Ceased wires list page"""
+    page = request.args.get('page', 1, type=int)
+    query = CeasedPrivateWire.query
+    
+    # Filter by search term
+    search = request.args.get('search', '')
+    if search:
+        query = query.filter(search_all_string_columns(CeasedPrivateWire, search))
+    
+    # Order by
+    sort = request.args.get('sort', 'cease_date')
+    order = request.args.get('order', 'desc')  # Default to newest first
+    
+    if order == 'asc':
+        query = query.order_by(getattr(CeasedPrivateWire, sort))
+    else:
+        query = query.order_by(getattr(CeasedPrivateWire, sort).desc())
+    
+    ceased_wires = query.paginate(page=page, per_page=20)
+    
+    return render_template('private_wire/ceased_list.html', 
+                          ceased_wires=ceased_wires,
+                          search=search,
+                          sort=sort,
+                          order=order)
+
+# =====================================================================
+# Routes - Turret Management
+# =====================================================================
+
+@app.route('/turret')
+@login_required
+def turret_list():
+    """Turret list page"""
+    page = request.args.get('page', 1, type=int)
+    query = DealerboardTurret.query
+    
+    # Filter by search term
+    search = request.args.get('search', '')
+    if search:
+        query = query.filter(search_all_string_columns(DealerboardTurret, search))
+    
+    # Filter by country
+    country = request.args.get('country', '')
+    if country:
+        query = query.filter_by(country=country)
+    
+    # Order by
+    sort = request.args.get('sort', 'mac_address')
+    order = request.args.get('order', 'asc')
+    
+    if order == 'desc':
+        query = query.order_by(getattr(DealerboardTurret, sort).desc())
+    else:
+        query = query.order_by(getattr(DealerboardTurret, sort))
+    
+    turrets = query.paginate(page=page, per_page=20)
+    
+    return render_template('turret/list.html', 
+                          turrets=turrets,
+                          search=search,
+                          country=country,
+                          sort=sort,
+                          order=order,
+                          countries=get_locations())
+
+@app.route('/ceased-wires/view/<int:id>')
+@login_required
+def ceased_wire_view(id):
+    """View details of a ceased private wire"""
+    ceased_pw = CeasedPrivateWire.query.get_or_404(id)
+    return render_template('private_wire/ceased_view.html', pw=ceased_pw)
+
+@app.route('/turret/add', methods=['GET', 'POST'])
+@login_required
+def turret_add():
+    """Add new turret"""
+    if request.method == 'POST':
+        mac_address = request.form.get('mac_address')
+        
+        # Check if MAC address already exists
+        if DealerboardTurret.query.filter_by(mac_address=mac_address).first():
+            flash('MAC address already exists', 'danger')
+            return redirect(url_for('turret_add'))
+        
+        new_turret = DealerboardTurret(
+            mac_address=mac_address,
+            ip_address=request.form.get('ip_address'),
+            zone=request.form.get('zone'),
+            firmware_version=request.form.get('firmware_version'),
+            model=request.form.get('model'),
+            country=request.form.get('country'),
+            office=request.form.get('office'),
+            desk_location=request.form.get('desk_location'),
+            switch_port_1=request.form.get('switch_port_1'),
+            switch_port_2=request.form.get('switch_port_2'),
+            last_change='Initial creation'
+        )
+        
+        db.session.add(new_turret)
+        db.session.commit()
+        
+        flash('Dealerboard turret added successfully', 'success')
+        return redirect(url_for('turret_list'))
+    
+    return render_template('turret/add.html', countries=get_locations())
+
+@app.route('/turret/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def turret_edit(id):
+    turret = DealerboardTurret.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        turret.mac_address = request.form.get('mac_address')
+        turret.ip_address = request.form.get('ip_address')
+        turret.zone = request.form.get('zone')
+        turret.firmware_version = request.form.get('firmware_version')
+        turret.model = request.form.get('model')
+        turret.country = request.form.get('country')
+        turret.office = request.form.get('office')
+        turret.desk_location = request.form.get('desk_location')
+        turret.switch_port_1 = request.form.get('switch_port_1')
+        turret.switch_port_2 = request.form.get('switch_port_2')
+        
+        turret.last_updated = datetime.utcnow()
+        turret.last_change = f'Updated by {current_user.username}'
+        
+        db.session.commit()
+        
+        flash('Dealerboard turret updated successfully', 'success')
+        return redirect(url_for('turret_list'))
+    
+    return render_template('turret/edit.html', 
+                          turret=turret,
+                          countries=get_locations())
+
+@app.route('/turret/export')
+@login_required
+def turret_export():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        'MAC Address', 'IP Address', 'Zone', 'Firmware Version', 'Model',
+        'Country', 'Office', 'Desk Location', 'Switch Port 1', 'Switch Port 2',
+        'Last Updated', 'Last Change'
+    ])
+    
+    # Query all Turrets
+    turrets = DealerboardTurret.query.all()
+    
+    # Write data
+    for turret in turrets:
+        writer.writerow([
+            turret.mac_address, turret.ip_address, turret.zone,
+            turret.firmware_version, turret.model, turret.country,
+            turret.office, turret.desk_location, turret.switch_port_1,
+            turret.switch_port_2, turret.last_updated.strftime('%Y-%m-%d %H:%M:%S'),
+            turret.last_change
+        ])
+    
+    output.seek(0)
+    csv_data = output.getvalue()
+    
+    return Response(
+        csv_data,
+        mimetype='text/csv',
+        headers={"Content-Disposition": "attachment;filename=dealerboard_turrets.csv"}
+    )
+
+# =====================================================================
+# Routes - Turret Move Management (FIXED)
+# =====================================================================
+
+@app.route('/turret/moves')
+@login_required
+def turret_moves_list():
+    if has_new_features():
+        # Turret moves functionality is now available
+        page = request.args.get('page', 1, type=int)
+        moves = TurretMove.query.order_by(TurretMove.planned_date.desc()).paginate(page=page, per_page=20)
+        return render_template('turret/moves_list.html', moves=moves)
+    else:
+        flash('Turret move functionality requires database migration.', 'warning')
+        return redirect(url_for('turret_list'))
+
+@app.route('/turret/moves/plan', methods=['GET', 'POST'])
+@login_required
+def plan_turret_move():
+    """Plan turret moves - FIXED to require individual desks"""
+    if not has_new_features():
+        flash('Turret move functionality requires database migration.', 'warning')
+        return redirect(url_for('turret_list'))
+    
+    if request.method == 'POST':
+        # Get form data
+        selected_turrets = request.form.getlist('selected_turrets')
+        planned_date = request.form.get('planned_date')
+        notes = request.form.get('notes', '')
+        
+        # Validate required fields
+        if not selected_turrets:
+            flash('Please select at least one turret to move.', 'danger')
+            return redirect(url_for('plan_turret_move'))
+        
+        if not planned_date:
+            flash('Please select a planned move date.', 'danger')
+            return redirect(url_for('plan_turret_move'))
+        
+        # NEW: Get individual desk assignments for each turret
+        moves_data = []
+        missing_desks = []
+        
+        for turret_id in selected_turrets:
+            desk_field = f'new_desk_{turret_id}'
+            new_desk = request.form.get(desk_field, '').strip()
+            
+            if not new_desk:
+                turret = DealerboardTurret.query.get(turret_id)
+                missing_desks.append(turret.mac_address if turret else f'Turret {turret_id}')
+            else:
+                moves_data.append({
+                    'turret_id': turret_id,
+                    'new_desk': new_desk
+                })
+        
+        if missing_desks:
+            flash(f'Please specify desk locations for: {", ".join(missing_desks)}', 'danger')
+            return redirect(url_for('plan_turret_move'))
+        
+        try:
+            # Parse the date
+            planned_date = datetime.strptime(planned_date, '%Y-%m-%dT%H:%M')
+            
+            moves_created = 0
+            
+            # Create individual moves for each turret
+            for move_data in moves_data:
+                turret = DealerboardTurret.query.get(move_data['turret_id'])
+                if not turret:
+                    continue
+                
+                current_desk = turret.desk_location or 'Unknown'
+                
+                # Create the move record
+                new_move = TurretMove(
+                    turret_id=move_data['turret_id'],
+                    current_desk=current_desk,
+                    new_desk=move_data['new_desk'],
+                    planned_date=planned_date,
+                    notes=notes,
+                    created_by=current_user.username,
+                    status='Planned'
+                )
+                
+                db.session.add(new_move)
+                moves_created += 1
+            
+            db.session.commit()
+            
+            if moves_created == 1:
+                flash(f'Move planned successfully for 1 turret!', 'success')
+            else:
+                flash(f'Moves planned successfully for {moves_created} turrets!', 'success')
+            
+            return redirect(url_for('turret_moves_list'))
+            
+        except ValueError:
+            flash('Invalid date format.', 'danger')
+        except Exception as e:
+            flash(f'Error planning moves: {str(e)}', 'danger')
+    
+    # GET request - show turret selection page
+    location_filter = request.args.get('location', '')
+    office_filter = request.args.get('office', '')
+    search = request.args.get('search', '')
+    
+    query = DealerboardTurret.query
+    
+    if location_filter:
+        query = query.filter(DealerboardTurret.country == location_filter)
+    
+    if office_filter:
+        query = query.filter(DealerboardTurret.office.like(f'%{office_filter}%'))
+    
+    if search:
+        search_filter = db.or_(
+            DealerboardTurret.mac_address.like(f'%{search}%'),
+            DealerboardTurret.ip_address.like(f'%{search}%'),
+            DealerboardTurret.desk_location.like(f'%{search}%'),
+            DealerboardTurret.model.like(f'%{search}%')
+        )
+        query = query.filter(search_filter)
+    
+    turrets = query.order_by(DealerboardTurret.mac_address).all()
+    
+    locations = db.session.query(DealerboardTurret.country).distinct().filter(
+        DealerboardTurret.country.isnot(None)
+    ).all()
+    locations = [loc[0] for loc in locations if loc[0]]
+    
+    offices = db.session.query(DealerboardTurret.office).distinct().filter(
+        DealerboardTurret.office.isnot(None)
+    ).all()
+    offices = [office[0] for office in offices if office[0]]
+    
+    return render_template('turret/plan_move.html', 
+                         turrets=turrets, 
+                         locations=locations,
+                         offices=offices,
+                         location_filter=location_filter,
+                         office_filter=office_filter,
+                         search=search)
+
+@app.route('/turret/moves/execute/<int:move_id>')
+@login_required
+def execute_turret_move(move_id):
+    """Execute a planned turret move"""
+    if not has_new_features():
+        flash('Turret move functionality requires database migration.', 'warning')
+        return redirect(url_for('turret_list'))
+    
+    move = TurretMove.query.get_or_404(move_id)
+    
+    if move.status != 'Planned':
+        flash('Only planned moves can be executed.', 'warning')
+        return redirect(url_for('turret_moves_list'))
+    
+    try:
+        # Update the turret's desk location
+        turret = move.turret
+        turret.desk_location = move.new_desk
+        turret.last_updated = datetime.utcnow()
+        turret.last_change = f'Moved to {move.new_desk} by {current_user.username}'
+        
+        # Update the move record
+        move.status = 'Completed'
+        move.actual_date = datetime.utcnow()
+        move.completed_by = current_user.username
+        
+        db.session.commit()
+        flash(f'Move executed successfully. Turret {turret.mac_address} moved to {move.new_desk}.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error executing move: {str(e)}', 'danger')
+    
+    return redirect(url_for('turret_moves_list'))
+
+@app.route('/turret/moves/cancel/<int:move_id>')
+@login_required
+def cancel_turret_move(move_id):
+    """Cancel a planned turret move"""
+    if not has_new_features():
+        flash('Turret move functionality requires database migration.', 'warning')
+        return redirect(url_for('turret_list'))
+    
+    move = TurretMove.query.get_or_404(move_id)
+    
+    if move.status not in ['Planned', 'In Progress']:
+        flash('Only planned or in-progress moves can be cancelled.', 'warning')
+        return redirect(url_for('turret_moves_list'))
+    
+    try:
+        move.status = 'Cancelled'
+        move.completed_by = current_user.username
+        move.notes = f"{move.notes or ''}\nCancelled by {current_user.username} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+        
+        db.session.commit()
+        flash('Move cancelled successfully.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error cancelling move: {str(e)}', 'danger')
+    
+    return redirect(url_for('turret_moves_list'))
+
+@app.route('/turret/moves/delete/<int:move_id>')
+@login_required
+@admin_required
+def delete_turret_move(move_id):
+    """Delete a turret move record (admin only)"""
+    if not has_new_features():
+        flash('Turret move functionality requires database migration.', 'warning')
+        return redirect(url_for('turret_list'))
+    
+    move = TurretMove.query.get_or_404(move_id)
+    
+    try:
+        turret_mac = move.turret.mac_address
+        db.session.delete(move)
+        db.session.commit()
+        flash(f'Move record for turret {turret_mac} deleted successfully.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting move: {str(e)}', 'danger')
+    
+    return redirect(url_for('turret_moves_list'))
+
+# =====================================================================
+# Routes - Dynamic Import System
+# =====================================================================
+
+@app.route('/import/dynamic/<entity_type>')
+@login_required
+def dynamic_import(entity_type):
+    """Dynamic import page for different entity types"""
+    if entity_type not in ['ddi', 'private_wire', 'turret']:
+        flash('Invalid entity type', 'danger')
+        return redirect(url_for('index'))
+    
+    # Get saved templates for this entity type
+    templates = ImportTemplate.query.filter_by(entity_type=entity_type).order_by(ImportTemplate.last_used.desc()).all()
+    
+    return render_template('import/dynamic_import.html', 
+                         entity_type=entity_type,
+                         templates=templates)
+
+@app.route('/import/upload/<entity_type>', methods=['POST'])
+@login_required
+def upload_import_file(entity_type):
+    """Upload and analyze CSV file for field mapping"""
+    if 'file' not in request.files:
+        flash('No file selected', 'danger')
+        return redirect(url_for('dynamic_import', entity_type=entity_type))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('No file selected', 'danger')
+        return redirect(url_for('dynamic_import', entity_type=entity_type))
+    
+    try:
+        # Save file temporarily
+        filename = secure_filename(file.filename)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{filename}")
+        file.save(temp_path)
+        
+        # Try to read CSV with different encodings
+        encodings_to_try = ['utf-8', 'latin-1', 'iso-8859-1', 'cp1252', 'windows-1252']
+        csv_headers = None
+        sample_data = []
+        used_encoding = None
+        
+        for encoding in encodings_to_try:
+            try:
+                with open(temp_path, 'r', encoding=encoding) as f:
+                    reader = csv.reader(f)
+                    csv_headers = next(reader)  # Get header row
+                    
+                    # Get first 3 rows as sample
+                    for i, row in enumerate(reader):
+                        if i < 3:
+                            sample_data.append(row)
+                        else:
+                            break
+                    
+                    used_encoding = encoding
+                    break
+            except UnicodeDecodeError:
+                continue
+        
+        if not csv_headers:
+            os.remove(temp_path)
+            flash('Could not decode file. Please check file encoding.', 'danger')
+            return redirect(url_for('dynamic_import', entity_type=entity_type))
+        
+        # Get expected fields for the entity type
+        expected_fields = get_expected_fields(entity_type)
+        
+        # Get suggested mappings (match headers to expected fields)
+        suggested_mappings = suggest_field_mappings(csv_headers, expected_fields)
+        
+        # Get saved templates for pre-fill option
+        templates = ImportTemplate.query.filter_by(entity_type=entity_type).order_by(ImportTemplate.last_used.desc()).all()
+        
+        return render_template('import/field_mapping.html',
+                             entity_type=entity_type,
+                             file_path=temp_path,
+                             encoding=used_encoding,
+                             csv_headers=csv_headers,
+                             sample_data=sample_data,
+                             expected_fields=expected_fields,
+                             suggested_mappings=suggested_mappings,
+                             templates=templates)
+        
+    except Exception as e:
+        if 'temp_path' in locals() and os.path.exists(temp_path):
+            os.remove(temp_path)
+        flash(f'Error processing file: {str(e)}', 'danger')
+        return redirect(url_for('dynamic_import', entity_type=entity_type))
+
+@app.route('/import/process/<entity_type>', methods=['POST'])
+@login_required
+def process_dynamic_import(entity_type):
+    """Process the import with user-defined field mappings"""
+    file_path = request.form.get('file_path')
+    encoding = request.form.get('encoding')
+    save_template = request.form.get('save_template')
+    template_name = request.form.get('template_name', '').strip()
+    
+    if not file_path or not os.path.exists(file_path):
+        flash('Invalid file information', 'danger')
+        return redirect(url_for('dynamic_import', entity_type=entity_type))
+    
+    # Get field mappings from form
+    expected_fields = get_expected_fields(entity_type)
+    field_mappings = {}
+    
+    for field in expected_fields:
+        csv_field = request.form.get(f'map_{field}')
+        if csv_field and csv_field != '':
+            field_mappings[field] = csv_field
+    
+    # Validate required mappings
+    required_fields = get_required_fields(entity_type)
+    missing_required = [field for field in required_fields if field not in field_mappings]
+    
+    if missing_required:
+        flash(f'Required field mappings missing: {", ".join(missing_required)}', 'danger')
+        return redirect(request.url)
+    
+    try:
+        # Process the import
+        results = process_import_data(entity_type, file_path, encoding, field_mappings)
+        
+        # Save template if requested
+        if save_template and template_name:
+            save_import_template(entity_type, template_name, field_mappings)
+        
+        # Clean up temp file
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        flash(f'Import completed: {results["added"]} added, {results["updated"]} updated, {results["skipped"]} skipped', 'success')
+        
+        # Redirect to appropriate list page
+        if entity_type == 'ddi':
+            return redirect(url_for('ddi_list'))
+        elif entity_type == 'private_wire':
+            return redirect(url_for('pw_list'))
+        elif entity_type == 'turret':
+            return redirect(url_for('turret_list'))
+        
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        flash(f'Error processing import: {str(e)}', 'danger')
+        return redirect(url_for('dynamic_import', entity_type=entity_type))
+
+@app.route('/import/template/<int:template_id>')
+@login_required
+def get_import_template(template_id):
+    """Get import template as JSON"""
+    template = ImportTemplate.query.get_or_404(template_id)
+    
+    # Update last used
+    template.last_used = datetime.utcnow()
+    db.session.commit()
+    
+    return jsonify({
+        'name': template.name,
+        'mappings': template.get_mappings()
+    })
+
+@app.route('/import/template/delete/<int:template_id>')
+@login_required
+def delete_import_template(template_id):
+    """Delete import template"""
+    template = ImportTemplate.query.get_or_404(template_id)
+    entity_type = template.entity_type
+    
+    db.session.delete(template)
+    db.session.commit()
+    
+    flash('Template deleted successfully', 'success')
+    return redirect(url_for('dynamic_import', entity_type=entity_type))
+
+# =====================================================================
+# Routes - Admin Database Management (FIXED)
+# =====================================================================
+
+@app.route('/admin/database')
+@login_required
+@admin_required
+def admin_database():
+    if has_new_features():
+        # Get table counts for the template
+        table_counts = {}
+        try:
+            table_counts['users'] = User.query.count()
+            table_counts['ddi_numbers'] = DDINumber.query.count()
+            table_counts['private_wires'] = PrivateWire.query.count()
+            table_counts['turrets'] = DealerboardTurret.query.count()
+            table_counts['ceased_wires'] = CeasedPrivateWire.query.count()
+            table_counts['turret_moves'] = TurretMove.query.count()
+            table_counts['import_templates'] = ImportTemplate.query.count()
+            table_counts['audit_logs'] = AuditLog.query.count()
+        except Exception as e:
+            flash(f'Error retrieving database statistics: {str(e)}', 'warning')
+            table_counts = {}
+        
+        return render_template('admin/database.html', table_counts=table_counts)
+    else:
+        flash('Database management requires migration.', 'warning')
+        return redirect(url_for('index'))
+
+@app.route('/admin/table/<table_name>')
+@login_required
+@admin_required
+def admin_table_view(table_name):
+    """View and manage specific database table"""
+    if not has_new_features():
+        flash('Database management requires migration.', 'warning')
+        return redirect(url_for('index'))
+    
+    # Map table names to models
+    table_models = {
+        'users': User,
+        'ddi_numbers': DDINumber,
+        'private_wires': PrivateWire,
+        'turrets': DealerboardTurret,
+        'ceased_wires': CeasedPrivateWire,
+        'turret_moves': TurretMove,
+        'import_templates': ImportTemplate,
+        'audit_logs': AuditLog
+    }
+    
+    if table_name not in table_models:
+        flash(f'Table "{table_name}" not found.', 'danger')
+        return redirect(url_for('admin_database'))
+    
+    model = table_models[table_name]
+    
+    try:
+        # Get search parameter
+        search = request.args.get('search', '')
+        query = model.query
+        
+        # Apply search filter if provided
+        if search:
+            query = query.filter(search_all_string_columns(model, search))
+        
+        # Get pagination
+        page = request.args.get('page', 1, type=int)
+        records = query.paginate(page=page, per_page=50, error_out=False)
+        
+        # Get column names
+        columns = [column.name for column in model.__table__.columns]
+        
+        return render_template('admin/table_view.html', 
+                             table_name=table_name,
+                             records=records,
+                             columns=columns,
+                             search=search)
+    except Exception as e:
+        flash(f'Error accessing table: {str(e)}', 'danger')
+        return redirect(url_for('admin_database'))
+
+@app.route('/admin/database/<table_name>/edit/<int:record_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_edit_record(table_name, record_id):
+    """Edit a record in a database table - FIXED VERSION"""
+    if not has_new_features():
+        flash('Database management requires migration.', 'warning')
+        return redirect(url_for('index'))
+    
+    # Map table names to models
+    table_models = {
+        'users': User,
+        'ddi_numbers': DDINumber,
+        'private_wires': PrivateWire,
+        'turrets': DealerboardTurret,
+        'ceased_wires': CeasedPrivateWire,
+        'turret_moves': TurretMove,
+        'import_templates': ImportTemplate,
+        'audit_logs': AuditLog
+    }
+    
+    if table_name not in table_models:
+        flash(f'Table "{table_name}" not found.', 'danger')
+        return redirect(url_for('admin_database'))
+    
+    model = table_models[table_name]
+    
+    try:
+        # Find the record
+        record = model.query.get_or_404(record_id)
+        
+        # Get column information
+        columns = []
+        for column in model.__table__.columns:
+            col_info = {
+                'name': column.name,
+                'type': str(column.type),
+                'nullable': column.nullable,
+                'primary_key': column.primary_key,
+                'value': getattr(record, column.name)
+            }
+            columns.append(col_info)
+        
+        if request.method == 'POST':
+            try:
+                # Update the record with proper data type handling
+                for column in model.__table__.columns:
+                    if not column.primary_key:  # Don't update primary keys
+                        field_value = request.form.get(column.name)
+                        
+                        # Skip auto-updated fields unless explicitly provided
+                        if column.name in ['last_updated', 'date_created'] and not field_value:
+                            continue
+                        
+                        # Handle different data types properly
+                        if field_value is not None:
+                            # Convert empty strings to None for nullable fields
+                            if field_value.strip() == '' and column.nullable:
+                                field_value = None
+                            elif field_value.strip() == '' and not column.nullable:
+                                # Skip empty required fields - keep existing value
+                                continue
+                            else:
+                                # Handle different column types
+                                if 'BOOLEAN' in str(column.type).upper():
+                                    field_value = field_value.lower() in ['true', '1', 'yes', 'on', 'checked']
+                                elif 'INTEGER' in str(column.type).upper():
+                                    try:
+                                        field_value = int(field_value) if field_value.strip() else None
+                                    except ValueError:
+                                        flash(f'Invalid integer value for {column.name}', 'warning')
+                                        continue
+                                elif 'DATETIME' in str(column.type).upper():
+                                    if field_value.strip():
+                                        try:
+                                            field_value = datetime.strptime(field_value, '%Y-%m-%dT%H:%M')
+                                        except ValueError:
+                                            try:
+                                                field_value = datetime.strptime(field_value, '%Y-%m-%d %H:%M:%S')
+                                            except ValueError:
+                                                flash(f'Invalid date format for {column.name}', 'warning')
+                                                continue
+                                    else:
+                                        field_value = None
+                            
+                            # Set the field value
+                            setattr(record, column.name, field_value)
+                
+                # Update timestamp if available
+                if hasattr(record, 'last_updated'):
+                    record.last_updated = datetime.utcnow()
+                
+                # Commit the changes
+                db.session.commit()
+                flash(f'Record {record_id} updated successfully.', 'success')
+                return redirect(url_for('admin_table_view', table_name=table_name))
+                
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating record: {str(e)}', 'danger')
+        
+        return render_template('admin/edit_record.html', 
+                             table_name=table_name,
+                             record=record,
+                             record_id=record_id,
+                             columns=columns)
+        
+    except Exception as e:
+        flash(f'Error editing record: {str(e)}', 'danger')
+        return redirect(url_for('admin_table_view', table_name=table_name))
+
+# =====================================================================
+# Routes - Database Backup
+# =====================================================================
+
+@app.route('/admin/backup-database')
+@login_required
+@admin_required
+def backup_database():
+    db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    backup_filename = f"telephony_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+    backup_path = os.path.join(basedir, 'backups', backup_filename)
+    
+    try:
+        db.session.close()
+        shutil.copy2(db_path, backup_path)
+        flash(f'Database backup created successfully: {backup_filename}', 'success')
+    except Exception as e:
+        flash(f'Error creating database backup: {str(e)}', 'danger')
+    
+    return redirect(url_for('index'))
+
+# =====================================================================
+# Database Initialization Function
+# =====================================================================
+
+def initialize_database():
+    """Initialize the database with initial users."""
+    # Create admin user if doesn't exist
+    if not User.query.filter_by(username='admin').first():
+        admin_user = User(
+            username='admin',
+            password=generate_password_hash('admin'),
+            role='admin',
+            active=True
+        )
+        db.session.add(admin_user)
+        
+    # Create regular user if doesn't exist
+    if not User.query.filter_by(username='user').first():
+        regular_user = User(
+            username='user',
+            password=generate_password_hash('user'),
+            role='user',
+            active=True
+        )
+        db.session.add(regular_user)
+    
+    db.session.commit()
+    print('Database initialized with default users.')
+
+# =====================================================================
+# Initialize Database Command (for Flask CLI)
+# =====================================================================
+
+@app.cli.command('init-db')
+def init_db_command():
+    """Clear the existing data and create new tables."""
+    db.drop_all()
+    db.create_all()
+    
+    # Create admin user
+    admin_user = User(
+        username='admin',
+        password=generate_password_hash('admin'),
+        role='admin',
+        active=True
+    )
+    db.session.add(admin_user)
+    
+    # Create regular user
+    regular_user = User(
+        username='user',
+        password=generate_password_hash('user'),
+        role='user',
+        active=True
+    )
+    db.session.add(regular_user)
+    
+    db.session.commit()
+    print('Initialized the database.')
+
+# =====================================================================
+# Run the application
+# =====================================================================
+
+if __name__ == '__main__':
+    # Create all tables if they don't exist
+    with app.app_context():
+        db.create_all()
+        # Initialize with default users if they don't exist
+        initialize_database()
+    
+    # Run the Flask development server
+    app.run(debug=True)

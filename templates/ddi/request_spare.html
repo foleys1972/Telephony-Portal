@@ -1,0 +1,68 @@
+## ddi/request_spare.html - Request Spare Number
+
+{% extends "base.html" %}
+
+{% block title %}Request Spare Number - Telephony Management{% endblock %}
+
+{% block header %}Request Spare Number{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Request Spare DDI Number</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    This will assign you the oldest spare number from the selected location.
+                </p>
+                
+                <form method="post">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="location" class="form-label">Location</label>
+                            <select class="form-select" id="location" name="location" required>
+                                <option value="">Select Location</option>
+                                {% for loc in locations %}
+                                <option value="{{ loc }}">{{ loc }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="cisco_cluster" class="form-label">Cisco Cluster</label>
+                            <select class="form-select" id="cisco_cluster" name="cisco_cluster">
+                                <option value="">Select Cisco Cluster</option>
+                                {% for c in cisco_clusters %}
+                                <option value="{{ c }}">{{ c }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="tpo" class="form-label">TPO</label>
+                            <select class="form-select" id="tpo" name="tpo">
+                                <option value="">Select TPO</option>
+                                {% for t in tpo_options %}
+                                <option value="{{ t }}">{{ t }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('ddi_list') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Assign Number</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

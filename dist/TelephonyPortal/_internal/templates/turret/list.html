@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Dealerboard Turrets - Telephony Management{% endblock %}
+
+{% block header %}Dealerboard Turrets{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    {% if current_user.is_admin() %}
+    <a href="{{ url_for('turret_add') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-plus me-1"></i> Add New
+    </a>
+    {% endif %}
+</div>
+<div class="btn-group me-2">
+    {% if current_user.is_admin() %}
+    <a href="{{ url_for('turret_import') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-file-import me-1"></i> Import
+    </a>
+    {% endif %}
+    <a href="{{ url_for('turret_export') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-file-export me-1"></i> Export
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search }}"
+                       placeholder="MAC Address (1-5), IP Address, DNS/Hostname, Zone, Desk Location...">
+            </div>
+            <div class="col-md-4">
+                <label for="country" class="form-label">Country</label>
+                <select class="form-select" id="country" name="country">
+                    <option value="" {% if not country %}selected{% endif %}>All Countries</option>
+                    {% for c in countries %}
+                    <option value="{{ c }}" {% if country == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Apply</button>
+            </div>
+            <div class="col-12">
+                <a href="{{ url_for('turret_list') }}" class="btn btn-secondary">Clear Filters</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Dealerboard Turrets List</h5>
+    </div>
+    <div class="card-body">
+        <style>
+            .turret-table {
+                min-width: 1700px;
+                table-layout: auto;
+            }
+            .turret-table th,
+            .turret-table td {
+                white-space: nowrap;
+            }
+            .turret-table .col-mac {
+                min-width: 190px;
+            }
+            .turret-table .col-actions {
+                width: 70px;
+                min-width: 70px;
+            }
+            .turret-table .col-sticky {
+                position: sticky;
+                left: 0;
+                z-index: 2;
+                background: var(--bs-body-bg);
+            }
+            .turret-table thead .col-sticky {
+                z-index: 3;
+                background: var(--bs-body-bg);
+            }
+            .turret-table .col-sticky-actions {
+                left: 0;
+            }
+            .turret-table .col-sticky-mac {
+                left: 70px;
+            }
+        </style>
+        
+        <div class="table-responsive">
+            <table class="table table-striped table-hover turret-table">
+                <thead>
+                    <tr>
+                        <th class="col-actions col-sticky col-sticky-actions">Actions</th>
+                        <th class="col-mac col-sticky col-sticky-mac">
+                            <a href="{{ url_for('turret_list', search=search, country=country, sort='mac_address', order='asc' if sort == 'mac_address' and order == 'desc' else 'desc') }}">
+                                MAC Address
+                                {% if sort == 'mac_address' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="col-mac">MAC 2</th>
+                        <th class="col-mac">MAC 3</th>
+                        <th class="col-mac">MAC 4</th>
+                        <th class="col-mac">MAC 5</th>
+                        <th>Serial Number</th>
+                        <th>
+                            <a href="{{ url_for('turret_list', search=search, country=country, sort='ip_address', order='asc' if sort == 'ip_address' and order == 'desc' else 'desc') }}">
+                                IP Address
+                                {% if sort == 'ip_address' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>DNS/Hostname</th>
+						<th>Desk Location</th>
+                        <th>Zone</th>
+                        <th>Model</th>
+                        <th>Firmware</th>
+                        <th>
+                            <a href="{{ url_for('turret_list', search=search, country=country, sort='country', order='asc' if sort == 'country' and order == 'desc' else 'desc') }}">
+                                Country
+                                {% if sort == 'country' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Office</th>
+                        <th>Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for turret in turrets.items %}
+                    <tr>
+                        <td class="col-actions col-sticky col-sticky-actions">
+                            {% if current_user.is_admin() %}
+                            <a href="{{ url_for('turret_edit', id=turret.id) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                        <td class="col-mac col-sticky col-sticky-mac">{{ turret.mac_address }}</td>
+                        <td class="col-mac">{{ turret.mac_address_2 or '-' }}</td>
+                        <td class="col-mac">{{ turret.mac_address_3 or '-' }}</td>
+                        <td class="col-mac">{{ turret.mac_address_4 or '-' }}</td>
+                        <td class="col-mac">{{ turret.mac_address_5 or '-' }}</td>
+                        <td>{{ turret.serial_number or '-' }}</td>
+                        <td>{{ turret.ip_address or '-' }}</td>
+                        <td>{{ turret.dns_hostname or '-' }}</td>
+                        <td>{{ turret.desk_location or '-' }}</td>
+                        <td>{{ turret.zone or '-' }}</td>
+                        <td>{{ turret.model or '-' }}</td>
+                        <td>{{ turret.firmware_version or '-' }}</td>
+                        <td>{{ turret.country or '-' }}</td>
+                        <td>{{ turret.office or '-' }}</td>
+                        <td>{{ turret.last_updated.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if turrets.pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if turrets.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('turret_list', page=turrets.prev_num, search=search, country=country, sort=sort, order=order) }}">
+                        Previous
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in turrets.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == turrets.page %}
+                        <li class="page-item active">
+                            <a class="page-link" href="#">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('turret_list', page=page_num, search=search, country=country, sort=sort, order=order) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">...</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if turrets.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('turret_list', page=turrets.next_num, search=search, country=country, sort=sort, order=order) }}">
+                        Next
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

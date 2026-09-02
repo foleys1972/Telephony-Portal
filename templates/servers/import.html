@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Import Servers - Telephony Management{% endblock %}
+
+{% block header %}Import Servers{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Servers from CSV</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Upload a CSV file to import servers. After upload, you will be prompted to map CSV columns to server fields.
+                </p>
+
+                <p class="text-info">
+                    <i class="fas fa-info-circle"></i>
+                    Existing records are matched by <strong>Hostname</strong> and will be updated.
+                </p>
+
+                <form method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">CSV File</label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".csv" required>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('servers_list') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Next: Map Fields</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

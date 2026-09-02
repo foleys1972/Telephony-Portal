@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Table: {{ table }} (Spreadsheet) - Admin{% endblock %}
+
+{% block header %}Table: {{ table }} (Spreadsheet View){% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ url_for('admin_database') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back
+    </a>
+    <a href="{{ url_for('admin_table_view', table=table) }}" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-table me-1"></i> Standard View
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input class="form-control" name="search" value="{{ search }}" placeholder="Search text columns...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Per page</label>
+                <input class="form-control" type="number" name="per_page" value="{{ per_page }}" min="10" max="500">
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Apply</button>
+                <a class="btn btn-secondary" href="{{ url_for('admin_table_spreadsheet', table=table) }}">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Spreadsheet View - {{ total }} total rows</h5>
+        <div class="d-flex align-items-center gap-3">
+            <form method="post" action="{{ url_for('admin_delete_all_records', table=table) }}" class="d-flex gap-2 align-items-center"
+                  onsubmit="return confirm('This will delete ALL rows in {{ table }}. This cannot be undone. Continue?');">
+                <input type="text" name="confirm" class="form-control form-control-sm" style="width: 180px;"
+                       placeholder="DELETE {{ table }}">
+                <button class="btn btn-sm btn-danger" type="submit" title="Delete all rows in this table">
+                    <i class="fas fa-trash me-1"></i> Delete All
+                </button>
+            </form>
+            <div class="text-muted small">
+                <i class="fas fa-info-circle"></i> Click any cell to edit. Press Enter to save, Esc to cancel.
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+            <table class="table table-bordered table-sm table-hover mb-0" id="spreadsheet-table">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="min-width: 80px; position: sticky; left: 0; background: #f8f9fa; z-index: 10;">Row ID</th>
+                        {% for c in columns %}
+                        <th style="min-width: 150px;">
+                            <code>{{ c }}</code>
+                            {% for col_info in column_info %}
+                                {% if col_info.name == c %}
+                                    <br><small class="text-muted">{{ col_info.type or 'TEXT' }}</small>
+                                {% endif %}
+                            {% endfor %}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr data-rowid="{{ r['_rowid_'] }}">
+                        <td class="text-center fw-bold" style="position: sticky; left: 0; background: white; z-index: 5;">
+                            {{ r['_rowid_'] }}
+                        </td>
+                        {% for c in columns %}
+                        <td class="editable-cell" 
+                            data-rowid="{{ r['_rowid_'] }}" 
+                            data-column="{{ c }}"
+                            data-value="{{ r[c] if r[c] is not none else '' }}"
+                            style="cursor: pointer; position: relative;">
+                            <span class="cell-content">{{ r[c] if r[c] is not none else '<em class="text-muted">NULL</em>'|safe }}</span>
+                            <input type="text" 
+                                   class="form-control form-control-sm cell-input d-none" 
+                                   value="{{ r[c] if r[c] is not none else '' }}"
+                                   data-original="{{ r[c] if r[c] is not none else '' }}">
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        {% if pages > 1 %}
+        <nav aria-label="Pagination">
+            <ul class="pagination justify-content-center mb-0">
+                {% set qp = request.args.to_dict() %}
+                {% set _ = qp.pop('page', None) %}
+                {% set base_qs = qp|urlencode %}
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin_table_spreadsheet', table=table) }}?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ page-1 }}">Prev</a>
+                </li>
+                <li class="page-item disabled"><a class="page-link" href="#">Page {{ page }} / {{ pages }}</a></li>
+                <li class="page-item {% if page >= pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin_table_spreadsheet', table=table) }}?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ page+1 }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('spreadsheet-table');
+    let editingCell = null;
+    let originalValue = null;
+
+    // Handle cell click
+    table.addEventListener('click', function(e) {
+        const cell = e.target.closest('.editable-cell');
+        if (!cell || editingCell) return;
+
+        startEditing(cell);
+    });
+
+    function startEditing(cell) {
+        if (editingCell) return;
+
+        editingCell = cell;
+        const content = cell.querySelector('.cell-content');
+        const input = cell.querySelector('.cell-input');
+        originalValue = input.value;
+
+        content.classList.add('d-none');
+        input.classList.remove('d-none');
+        input.focus();
+        input.select();
+
+        // Handle Enter key
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveCell(cell, input.value);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelEditing(cell);
+            }
+        });
+
+        // Handle blur (click outside)
+        input.addEventListener('blur', function() {
+            if (editingCell === cell) {
+                saveCell(cell, input.value);
+            }
+        });
+    }
+
+    function cancelEditing(cell) {
+        if (!editingCell || editingCell !== cell) return;
+
+        const content = cell.querySelector('.cell-content');
+        const input = cell.querySelector('.cell-input');
+        
+        input.value = originalValue;
+        content.classList.remove('d-none');
+        input.classList.add('d-none');
+        editingCell = null;
+    }
+
+    function saveCell(cell, newValue) {
+        if (!editingCell || editingCell !== cell) return;
+
+        const rowid = cell.dataset.rowid;
+        const column = cell.dataset.column;
+        const content = cell.querySelector('.cell-content');
+        const input = cell.querySelector('.cell-input');
+
+        // Show loading state
+        cell.style.opacity = '0.6';
+        cell.style.pointerEvents = 'none';
+
+        // Send update request
+        fetch('{{ url_for("admin_update_cell", table=table) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                rowid: rowid,
+                column: column,
+                value: newValue
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update display
+                if (newValue === '' || newValue === null) {
+                    content.innerHTML = '<em class="text-muted">NULL</em>';
+                } else {
+                    content.textContent = newValue;
+                }
+                input.value = newValue;
+                cell.dataset.value = newValue;
+                
+                // Flash success indicator
+                cell.style.backgroundColor = '#d4edda';
+                setTimeout(() => {
+                    cell.style.backgroundColor = '';
+                }, 500);
+            } else {
+                alert('Error updating cell: ' + (data.error || 'Unknown error'));
+                input.value = originalValue;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating cell: ' + error.message);
+            input.value = originalValue;
+        })
+        .finally(() => {
+            content.classList.remove('d-none');
+            input.classList.add('d-none');
+            cell.style.opacity = '';
+            cell.style.pointerEvents = '';
+            editingCell = null;
+        });
+    }
+});
+</script>
+
+<style>
+.editable-cell:hover {
+    background-color: #f0f0f0 !important;
+}
+
+.cell-input {
+    border: 2px solid #007bff;
+    border-radius: 0;
+}
+
+#spreadsheet-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fa;
+}
+
+#spreadsheet-table tbody td[style*="sticky"] {
+    z-index: 5;
+}
+</style>
+{% endblock %}
+

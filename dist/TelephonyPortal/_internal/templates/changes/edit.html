@@ -1,0 +1,439 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Change - Telephony Management{% endblock %}
+
+{% block header %}Edit Change{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Change Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <input type="hidden" name="next" value="{{ next_url }}">
+                    <input type="hidden" name="loaded_last_updated" value="{{ (change.last_updated.isoformat() if change.last_updated else '') }}">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Region</label>
+                            <select class="form-select" name="region">
+                                <option value="">Select...</option>
+                                {% for r in regions %}
+                                <option value="{{ r }}" {% if change.region == r %}selected{% endif %}>{{ r }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">CR#</label>
+                            <input type="text" class="form-control" name="cr_number" value="{{ change.cr_number }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="start_date" value="{{ change.start_date.strftime('%Y-%m-%d') if change.start_date else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Title</label>
+                            <textarea class="form-control" name="title" rows="3">{{ change.title }}</textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="">Select...</option>
+                                {% for v in change_statuses %}
+                                <option value="{{ v }}" {% if change.status == v %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Change Category</label>
+                            <select class="form-select" name="change_category">
+                                <option value="">Select...</option>
+                                {% for v in change_categories %}
+                                <option value="{{ v }}" {% if change.change_category == v %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Change Risk Level</label>
+                            <input type="text" class="form-control" name="change_risk_level" value="{{ change.change_risk_level }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Technology</label>
+                            <select class="form-select" name="technology">
+                                <option value="">Select...</option>
+                                {% for v in technologies %}
+                                <option value="{{ v }}" {% if change.technology == v %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">BAU/Project</label>
+                            <input type="text" class="form-control" name="bau_project" value="{{ change.bau_project }}" placeholder="BAU or Project">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">SNOW Link</label>
+                            <input type="text" class="form-control" name="snow_link" value="{{ change.snow_link }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Raised By</label>
+                            <input type="text" class="form-control" name="raised_by" value="{{ change.raised_by }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tech Lead</label>
+                            <input type="text" class="form-control" name="tech_lead" value="{{ change.tech_lead }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Regional approval</label>
+                            {% set regional_approval_status = change.regional_approval_status or '' %}
+                            <select class="form-select" name="regional_approval_status" id="regional_approval_status">
+                                <option value="">Select...</option>
+                                {% for v in yes_no %}
+                                <option value="{{ v }}" {% if regional_approval_status == v %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if not current_user.can_provide_regional_approval %}
+                            <div class="form-text">Only configured Regional Approvers can change this field.</div>
+                            <script>
+                              document.addEventListener('DOMContentLoaded', () => {
+                                const sel = document.getElementById('regional_approval_status');
+                                if (sel) sel.disabled = true;
+                              });
+                            </script>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3" id="regionalApproverRow" style="display:none;">
+                        <div class="col-md-4">
+                            <label class="form-label">Regional Approver Name</label>
+                            <input type="text" class="form-control" name="regional_approver_name" id="regional_approver_name" value="{{ change.regional_approver_name }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">COO Update</label>
+                            <select class="form-select" name="coo_update">
+                                <option value="">Select...</option>
+                                {% for v in yes_no %}
+                                <option value="{{ v }}" {% if change.coo_update == v %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Global Service Approval</label>
+                            <select class="form-select" name="global_service_approval" {% if not current_user.can_approve_global_service %}disabled{% endif %}>
+                                <option value="">Select...</option>
+                                {% for v in global_service_approvals %}
+                                <option value="{{ v }}" {% if change.global_service_approval == v %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if not current_user.can_approve_global_service %}
+                            <div class="form-text">Only configured Global Service Approvers can set this field.</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">CAB Date</label>
+                            {% set current = change.cab_date.strftime('%Y-%m-%d') if change.cab_date else '' %}
+                            <input type="date" class="form-control" name="cab_date" id="cab_date" value="{{ current }}">
+                            <div class="form-text">Optional: use the picker below to select a Monday.</div>
+                            <select class="form-select mt-2" id="cab_monday_picker">
+                                <option value="">Pick a Monday...</option>
+                                {% for d in cab_mondays %}
+                                {% set ds = d.strftime('%Y-%m-%d') %}
+                                <option value="{{ ds }}" {% if ds == current %}selected{% endif %}>{{ ds }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="w-100">
+                                <label class="form-label">ICE Sent</label>
+                                <select class="form-select" name="ice_sent">
+                                    {% set ice_sent_val = 'N/A' if change.ice_sent is none else ('Yes' if change.ice_sent else 'No') %}
+                                    {% for v in yes_no_na %}
+                                    <option value="{{ v }}" {% if ice_sent_val == v %}selected{% endif %}>{{ v }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">ICE Approved</label>
+                            <select class="form-select" name="ice_approved">
+                                {% set ice_approved_val = 'N/A' if change.ice_approved is none else ('Yes' if change.ice_approved else 'No') %}
+                                {% for v in yes_no_na %}
+                                <option value="{{ v }}" {% if ice_approved_val == v %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Approved By</label>
+                            <input type="text" class="form-control" name="approved_by" id="approved_by" value="{{ change.approved_by }}" {% if not current_user.can_approve_changes %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Approved Status</label>
+                            <select class="form-select" name="approved_status" id="approved_status" {% if not current_user.can_approve_changes %}disabled{% endif %}>
+                                {% set approved_status = change.approved_status or ('Yes' if change.approved else 'No') %}
+                                {% for v in approved_statuses %}
+                                <option value="{{ v }}" {% if approved_status == v %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if not current_user.can_approve_changes %}
+                            <div class="form-text">Approval can only be set by a configured Change Approver.</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="regular_change" value="1" id="regular_change" {% if change.regular_change %}checked{% endif %}>
+                                <label class="form-check-label" for="regular_change">Regular Change</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="rtc_cab" value="1" id="rtc_cab" {% if change.rtc_cab %}checked{% endif %}>
+                                <label class="form-check-label" for="rtc_cab">RTC CAB</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Risk Mitigation</label>
+                            <textarea class="form-control" name="risk_mitigation" rows="4">{{ change.risk_mitigation }}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Comments</label>
+                            <textarea class="form-control" name="comments" rows="4">{{ change.comments }}</textarea>
+                        </div>
+                    </div>
+
+                    {% if custom_fields %}
+                    <hr>
+                    <h6 class="mb-3">Custom Fields</h6>
+                    <div class="row g-3 mb-3">
+                        {% for f in custom_fields %}
+                        <div class="col-md-6">
+                            <label class="form-label">{{ f.label }}{% if f.is_required %} <span class="text-danger">*</span>{% endif %}</label>
+                            {% set val = custom_values.get(f.id,'') %}
+                            {% if f.field_type == 'textarea' %}
+                                <textarea class="form-control" name="cf_{{ f.id }}" rows="3" {% if f.is_required %}required{% endif %}>{{ val }}</textarea>
+                            {% elif f.field_type == 'date' %}
+                                <input type="date" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'number' %}
+                                <input type="number" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'url' %}
+                                <input type="url" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'yesno' %}
+                                <select class="form-select" name="cf_{{ f.id }}" {% if f.is_required %}required{% endif %}>
+                                    <option value="" {% if not val %}selected{% endif %}>Select...</option>
+                                    <option value="Yes" {% if val == 'Yes' %}selected{% endif %}>Yes</option>
+                                    <option value="No" {% if val == 'No' %}selected{% endif %}>No</option>
+                                </select>
+                            {% elif f.field_type == 'dropdown' %}
+                                <select class="form-select" name="cf_{{ f.id }}" {% if f.is_required %}required{% endif %}>
+                                    <option value="" {% if not val %}selected{% endif %}>Select...</option>
+                                    {% for o in f.options_list %}
+                                    <option value="{{ o }}" {% if val == o %}selected{% endif %}>{{ o }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <input type="text" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Date Created</label>
+                            <input type="text" class="form-control" value="{{ change.date_created.strftime('%Y-%m-%d %H:%M:%S') if change.date_created else '' }}" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Updated</label>
+                            <input type="text" class="form-control" value="{{ change.last_updated.strftime('%Y-%m-%d %H:%M:%S') if change.last_updated else '' }}" disabled>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Raised Date/Time</label>
+                            <input type="text" class="form-control" value="{{ change.raised_datetime.strftime('%Y-%m-%d %H:%M:%S') if change.raised_datetime else '' }}" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Updated By</label>
+                            <input type="text" class="form-control" value="{{ change.last_updated_by or '' }}" disabled>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <details class="mb-3">
+                        <summary class="mb-2"><strong>Audit Trail</strong></summary>
+                        {% if audit_entries %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 170px;">When</th>
+                                        <th style="min-width: 140px;">Who</th>
+                                        <th style="min-width: 90px;">Action</th>
+                                        <th>Summary</th>
+                                        <th style="min-width: 140px;">Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for e in audit_entries %}
+                                    {% set a = e.audit %}
+                                    <tr>
+                                        <td>{{ a.changed_at.strftime('%Y-%m-%d %H:%M:%S') if a.changed_at else '' }}</td>
+                                        <td>{{ a.changed_by or '' }}</td>
+                                        <td>{{ a.action or '' }}</td>
+                                        <td>{{ a.summary or '' }}</td>
+                                        <td>
+                                            <details>
+                                                {% if e.rows %}
+                                                <summary>Changes ({{ e.rows|length }})</summary>
+                                                <div class="table-responsive mt-2">
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th style="min-width: 90px;">Scope</th>
+                                                                <th style="min-width: 180px;">Field</th>
+                                                                <th>Before</th>
+                                                                <th>After</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for r in e.rows %}
+                                                            <tr>
+                                                                <td>{{ r.scope }}</td>
+                                                                <td>{{ r.field }}</td>
+                                                                <td>{{ r.before }}</td>
+                                                                <td>{{ r.after }}</td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                {% else %}
+                                                <summary>View</summary>
+                                                <div class="text-muted small mt-2">No field diffs recorded for this entry (snapshot/raw available).</div>
+                                                {% endif %}
+
+                                                <details class="mt-2">
+                                                    <summary>Raw</summary>
+                                                    <pre class="small mb-0">{{ e.raw or '' }}</pre>
+                                                </details>
+                                            </details>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-muted">No audit entries yet.</div>
+                        {% endif %}
+                    </details>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ next_url }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <a href="{{ url_for('changes_edit', id=change.id, next=next_url) }}" class="btn btn-outline-secondary me-md-2">Refresh</a>
+                        {% if current_user.can_edit_changes() %}
+                        <button
+                            type="submit"
+                            class="btn btn-outline-danger me-md-2"
+                            formmethod="post"
+                            formaction="{{ url_for('changes_delete', id=change.id, next=next_url) }}"
+                            onclick="return confirm('Delete this change record? This cannot be undone.');"
+                        >
+                            Delete
+                        </button>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">Update</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const cabDate = document.getElementById('cab_date');
+  const cabPicker = document.getElementById('cab_monday_picker');
+  if (cabDate && cabPicker) {
+    cabPicker.addEventListener('change', () => {
+      if (cabPicker.value) cabDate.value = cabPicker.value;
+    });
+  }
+  const sel = document.getElementById('regional_approval_status');
+  const row = document.getElementById('regionalApproverRow');
+  const nameInput = document.getElementById('regional_approver_name');
+  const canRegional = {{ 'true' if current_user.can_provide_regional_approval else 'false' }};
+  const approverName = {{ (current_user.name or current_user.username)|tojson }};
+  const approvedSel = document.getElementById('approved_status');
+  const approvedBy = document.getElementById('approved_by');
+  const canApprove = {{ 'true' if current_user.can_approve_changes else 'false' }};
+  const changeApproverName = {{ (current_user.name or current_user.username)|tojson }};
+  let lastRegional = sel ? sel.value : '';
+  function sync(triggeredByRegionalChange=false) {
+    const currentRegional = sel ? sel.value : '';
+    const isYes = (currentRegional === 'Yes');
+    row.style.display = isYes ? 'block' : 'none';
+    if (nameInput) nameInput.required = isYes;
+
+    // Only stamp the approver name when the user transitions to Yes.
+    // Do NOT overwrite an existing approver name on page load or when other fields change.
+    if (isYes && nameInput && canRegional && triggeredByRegionalChange && lastRegional !== 'Yes') {
+      nameInput.value = approverName;
+    }
+
+    // Clear approver name when transitioning away from Yes.
+    if (!isYes && nameInput && triggeredByRegionalChange && lastRegional === 'Yes') {
+      nameInput.value = '';
+    }
+
+    lastRegional = currentRegional;
+    if (approvedSel && approvedBy && canApprove) {
+      if (approvedSel.value === 'Yes') {
+        approvedBy.value = changeApproverName;
+      } else if (approvedSel.value === 'No') {
+        approvedBy.value = '';
+      }
+    }
+  }
+  if (sel) {
+    sel.addEventListener('change', () => sync(true));
+    sync(false);
+  }
+  if (approvedSel) {
+    approvedSel.addEventListener('change', () => sync(false));
+    sync(false);
+  }
+});
+</script>
+{% endblock %}
+
+

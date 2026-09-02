@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Update Servers - Telephony Management{% endblock %}
+
+{% block header %}Bulk Update Servers{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Bulk Update by Current OS</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    This will update all <strong>live servers</strong> currently matching the selected OS.
+                </p>
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Current OS (match)</label>
+                        <select class="form-select" name="old_os" required>
+                            <option value="">-- Select --</option>
+                            {% for o in oses %}
+                            <option value="{{ o }}">{{ o }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">New OS (optional)</label>
+                        <select class="form-select" name="new_os">
+                            <option value="">-- Leave unchanged --</option>
+                            {% for o in oses %}
+                            <option value="{{ o }}">{{ o }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Use this if you are renaming/standardizing the OS string.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">New EOL Date (optional)</label>
+                        <input class="form-control" type="date" name="new_eol_date">
+                        <div class="form-text">Set the same EOL date for all servers matching the current OS.</div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('servers_list') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Apply Bulk Update</button>
+                    </div>
+                </form>
+
+                <hr>
+                <div class="text-muted small">
+                    Example: Select <strong>Windows 2019 R2</strong> as Current OS and set <strong>New EOL Date</strong> to update 50 servers at once.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Add Private Wire - Telephony Management{% endblock %}
+
+{% block header %}Add New Private Wire{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Private Wire Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="record_no" class="form-label">Record No</label>
+                            <input type="text" class="form-control" id="record_no" name="record_no" {% if not is_admin %}value="Auto-set" disabled{% else %}required{% endif %}>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="location" class="form-label">Location</label>
+                            <select class="form-select" id="location" name="location" {% if not is_admin %}disabled{% else %}required{% endif %}>
+                                <option value="">Select Location</option>
+                                {% for loc in locations %}
+                                <option value="{{ loc }}">{{ loc }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="dc_locale" class="form-label">DC Locale</label>
+                            <input type="text" class="form-control" id="dc_locale" name="dc_locale" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label for="vega_port" class="form-label">Vega Port</label>
+                            <input type="text" class="form-control" id="vega_port" name="vega_port" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="channel" class="form-label">Channel</label>
+                            <input type="text" class="form-control" id="channel" name="channel" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="bearer_no" class="form-label">Bearer No</label>
+                            <input type="text" class="form-control" id="bearer_no" name="bearer_no" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="circuit_no" class="form-label">Circuit No</label>
+                            <input type="text" class="form-control" id="circuit_no" name="circuit_no">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="back_up_bearer" class="form-label">Back up Bearer</label>
+                            <input type="text" class="form-control" id="back_up_bearer" name="back_up_bearer" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cluster_name" class="form-label">Cluster Name</label>
+                            <input type="text" class="form-control" id="cluster_name" name="cluster_name" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="tpo_name" class="form-label">TPO Name</label>
+                            <input type="text" class="form-control" id="tpo_name" name="tpo_name" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="vega_hostname" class="form-label">Vega Hostname</label>
+                            <input type="text" class="form-control" id="vega_hostname" name="vega_hostname" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="back_up_vega_gw" class="form-label">Back up Vega GW</label>
+                            <input type="text" class="form-control" id="back_up_vega_gw" name="back_up_vega_gw" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h5>Additional Fields</h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label for="pw_type" class="form-label">PW Type</label>
+                            <input type="text" class="form-control" id="pw_type" name="pw_type">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="vendor" class="form-label">Vendor</label>
+                            <input type="text" class="form-control" id="vendor" name="vendor" {% if not is_admin %}disabled{% endif %}>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="btt_slot" class="form-label">BTT Slot</label>
+                            <input type="text" class="form-control" id="btt_slot" name="btt_slot">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="aor" class="form-label">AOR</label>
+                            <input type="text" class="form-control" id="aor" name="aor">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="a_or_b" class="form-label">A or B</label>
+                            <input type="text" class="form-control" id="a_or_b" name="a_or_b">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="dedicated_country" class="form-label">Dedicated Country</label>
+                            <input type="text" class="form-control" id="dedicated_country" name="dedicated_country">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="hsbc_main_user" class="form-label">HSBC Main User</label>
+                            <input type="text" class="form-control" id="hsbc_main_user" name="hsbc_main_user">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label for="employee_id" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employee_id" name="employee_id">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="private_public" class="form-label">Private / Public</label>
+                            <input type="text" class="form-control" id="private_public" name="private_public">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="line_label" class="form-label">Line Label</label>
+                            <input type="text" class="form-control" id="line_label" name="line_label">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="vr_yn" class="form-label">VR Y/N</label>
+                            <input type="text" class="form-control" id="vr_yn" name="vr_yn">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="company_name" class="form-label">Company Name</label>
+                            <input type="text" class="form-control" id="company_name" name="company_name">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="company_contact" class="form-label">Company Contact</label>
+                            <input type="text" class="form-control" id="company_contact" name="company_contact">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="company_email" class="form-label">Company Email</label>
+                            <input type="email" class="form-control" id="company_email" name="company_email">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="snow_ref" class="form-label">SNOW Ref</label>
+                            <input type="text" class="form-control" id="snow_ref" name="snow_ref">
+                        </div>
+                    </div>
+
+                    {% if custom_fields %}
+                    <hr>
+                    <h6 class="mb-3">Custom Fields</h6>
+                    <div class="row g-3 mb-3">
+                        {% for f in custom_fields %}
+                        <div class="col-md-6">
+                            <label class="form-label">{{ f.label }}{% if f.is_required %} <span class="text-danger">*</span>{% endif %}</label>
+                            {% set val = custom_values.get(f.id,'') %}
+                            {% if f.field_type == 'textarea' %}
+                                <textarea class="form-control" name="cf_{{ f.id }}" rows="3" {% if f.is_required %}required{% endif %}>{{ val }}</textarea>
+                            {% elif f.field_type == 'date' %}
+                                <input type="date" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'number' %}
+                                <input type="number" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'url' %}
+                                <input type="url" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'yesno' %}
+                                <select class="form-select" name="cf_{{ f.id }}" {% if f.is_required %}required{% endif %}>
+                                    <option value="" {% if not val %}selected{% endif %}>Select...</option>
+                                    <option value="Yes" {% if val == 'Yes' %}selected{% endif %}>Yes</option>
+                                    <option value="No" {% if val == 'No' %}selected{% endif %}>No</option>
+                                </select>
+                            {% elif f.field_type == 'dropdown' %}
+                                <select class="form-select" name="cf_{{ f.id }}" {% if f.is_required %}required{% endif %}>
+                                    <option value="" {% if not val %}selected{% endif %}>Select...</option>
+                                    {% for o in f.options_list %}
+                                    <option value="{{ o }}" {% if val == o %}selected{% endif %}>{{ o }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <input type="text" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('pw_list') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

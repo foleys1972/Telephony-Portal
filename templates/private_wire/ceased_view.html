@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Ceased Private Wire Details - Telephony Management{% endblock %}
+
+{% block header %}Ceased Private Wire Details{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ url_for('ceased_wires_list') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Ceased Wires
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="card-title mb-0">Ceased Private Wire Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6>Cease Information</h6>
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 30%">Cease Date</th>
+                            <td>{{ pw.cease_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Ceased By</th>
+                            <td>{{ pw.ceased_by }}</td>
+                        </tr>
+                        <tr>
+                            <th>Cease Reason</th>
+                            <td>{{ pw.cease_reason }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Record Information</h6>
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 30%">Record No</th>
+                            <td>{{ pw.record_no }}</td>
+                        </tr>
+                        <tr>
+                            <th>Original Record No</th>
+                            <td>{{ pw.original_record_no }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date Created</th>
+                            <td>{{ pw.date_created.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <h5 class="mb-3">Wire Details</h5>
+        
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Location Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Location</dt>
+                            <dd class="col-sm-8">{{ pw.location }}</dd>
+                            
+                            <dt class="col-sm-4">DC Locale</dt>
+                            <dd class="col-sm-8">{{ pw.dc_locale }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Connection Details</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Vega Port</dt>
+                            <dd class="col-sm-8">{{ pw.vega_port }}</dd>
+                            
+                            <dt class="col-sm-4">Channel</dt>
+                            <dd class="col-sm-8">{{ pw.channel }}</dd>
+                            
+                            <dt class="col-sm-4">Bearer No</dt>
+                            <dd class="col-sm-8">{{ pw.bearer_no }}</dd>
+                            
+                            <dt class="col-sm-4">Circuit No</dt>
+                            <dd class="col-sm-8">{{ pw.circuit_no }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Backup Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Backup Bearer</dt>
+                            <dd class="col-sm-8">{{ pw.back_up_bearer }}</dd>
+                            
+                            <dt class="col-sm-4">Backup Vega GW</dt>
+                            <dd class="col-sm-8">{{ pw.back_up_vega_gw }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">System Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Cluster Name</dt>
+                            <dd class="col-sm-8">{{ pw.cluster_name }}</dd>
+                            
+                            <dt class="col-sm-4">TPO Name</dt>
+                            <dd class="col-sm-8">{{ pw.tpo_name }}</dd>
+                            
+                            <dt class="col-sm-4">Vega Hostname</dt>
+                            <dd class="col-sm-8">{{ pw.vega_hostname }}</dd>
+                            
+                            <dt class="col-sm-4">Vendor</dt>
+                            <dd class="col-sm-8">{{ pw.vendor }}</dd>
+                            
+                            <dt class="col-sm-4">PW Type</dt>
+                            <dd class="col-sm-8">{{ pw.pw_type }}</dd>
+                            
+                            <dt class="col-sm-4">BTT Slot</dt>
+                            <dd class="col-sm-8">{{ pw.btt_slot }}</dd>
+                            
+                            <dt class="col-sm-4">AOR</dt>
+                            <dd class="col-sm-8">{{ pw.aor }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">User Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">A or B</dt>
+                            <dd class="col-sm-8">{{ pw.a_or_b }}</dd>
+                            
+                            <dt class="col-sm-4">Dedicated Country</dt>
+                            <dd class="col-sm-8">{{ pw.dedicated_country }}</dd>
+                            
+                            <dt class="col-sm-4">HSBC Main User</dt>
+                            <dd class="col-sm-8">{{ pw.hsbc_main_user }}</dd>
+                            
+                            <dt class="col-sm-4">Employee ID</dt>
+                            <dd class="col-sm-8">{{ pw.employee_id }}</dd>
+                            
+                            <dt class="col-sm-4">Private/Public</dt>
+                            <dd class="col-sm-8">{{ pw.private_public }}</dd>
+                            
+                            <dt class="col-sm-4">Line Label</dt>
+                            <dd class="col-sm-8">{{ pw.line_label }}</dd>
+                            
+                            <dt class="col-sm-4">VR Y/N</dt>
+                            <dd class="col-sm-8">{{ pw.vr_yn }}</dd>
+                            
+                            <dt class="col-sm-4">SNOW Ref</dt>
+                            <dd class="col-sm-8">{{ pw.snow_ref }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Company Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Company Name</dt>
+                            <dd class="col-sm-8">{{ pw.company_name }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-4">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Company Contact</dt>
+                            <dd class="col-sm-8">{{ pw.company_contact }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-4">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Company Email</dt>
+                            <dd class="col-sm-8">{{ pw.company_email }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
