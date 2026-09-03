@@ -40,6 +40,7 @@ output.py
 overview.txt
 simple_init_db.py
 add_cab_lock_table.py
+add_changes_table.py
 add_change_approval_fields.py
 add_change_approved_status.py
 add_change_raised_datetime.py
