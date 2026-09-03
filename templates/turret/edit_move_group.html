@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Move Group: {{ move_group.move_name }}{% endblock %}
+
+{% block header %}Edit Move Group: {{ move_group.move_name }}{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ url_for('turret_view_move_group', id=move_group.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to View
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .move-item {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #f8f9fa;
+    }
+    .turret-info {
+        background-color: #e3f2fd;
+        border-radius: 0.375rem;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post">
+    <div class="row">
+        <!-- Move Group Details -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit me-2"></i>Move Group Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="move_name" class="form-label">Move Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="move_name" name="move_name" 
+                               value="{{ move_group.move_name }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ move_group.description or '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="planned_execution_date" class="form-label">Planned Execution Date</label>
+                        <input type="datetime-local" class="form-control" id="planned_execution_date" 
+                               name="planned_execution_date" 
+                               value="{{ move_group.planned_execution_date.strftime('%Y-%m-%dT%H:%M') if move_group.planned_execution_date else '' }}">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Status:</strong> {{ move_group.status }}<br>
+                        <strong>Created:</strong> {{ move_group.created_date.strftime('%Y-%m-%d %H:%M') }}<br>
+                        <strong>By:</strong> {{ move_group.created_by }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Individual Moves -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-desktop me-2"></i>Individual Moves ({{ move_group.moves|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for move in move_group.moves %}
+                    <div class="move-item">
+                        <!-- Turret Information -->
+                        <div class="turret-info">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>{{ move.turret.mac_address }}</strong>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Current Location:</small><br>
+                                    {{ move.from_desk or 'Not set' }}
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Office - Country:</small><br>
+                                    {{ move.from_office or 'Not set' }} - {{ move.from_country or 'Not set' }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Move Configuration -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">To Desk <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="to_desk_{{ move.id }}" 
+                                       value="{{ move.to_desk }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">To Office</label>
+                                <input type="text" class="form-control" name="to_office_{{ move.id }}" 
+                                       value="{{ move.to_office or '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">To Country</label>
+                                <select class="form-select" name="to_country_{{ move.id }}">
+                                    <option value="">Select Country</option>
+                                    {% for country in countries %}
+                                    <option value="{{ country }}" {% if country == move.to_country %}selected{% endif %}>
+                                        {{ country }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Move Reason</label>
+                                <input type="text" class="form-control" name="move_reason_{{ move.id }}" 
+                                       value="{{ move.move_reason or '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Priority</label>
+                                <select class="form-select" name="priority_{{ move.id }}">
+                                    <option value="Normal" {% if move.priority == 'Normal' %}selected{% endif %}>Normal</option>
+                                    <option value="Medium" {% if move.priority == 'Medium' %}selected{% endif %}>Medium</option>
+                                    <option value="High" {% if move.priority == 'High' %}selected{% endif %}>High</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Configuration</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="network_config_{{ move.id }}" value="1"
+                                           {% if move.requires_network_config %}checked{% endif %}>
+                                    <label class="form-check-label">Network Config</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="phone_config_{{ move.id }}" value="1"
+                                           {% if move.requires_phone_config %}checked{% endif %}>
+                                    <label class="form-check-label">Phone Config</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Status Information -->
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <small class="text-muted">
+                                    Status: <span class="badge bg-secondary">{{ move.status }}</span>
+                                    {% if move.created_date %}
+                                    | Created: {{ move.created_date.strftime('%Y-%m-%d %H:%M') }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('turret_view_move_group', id=move_group.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save me-1"></i>Update Move Group
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const deskInputs = document.querySelectorAll('input[name^="to_desk_"]');
+        let hasErrors = false;
+        
+        deskInputs.forEach(input => {
+            if (!input.value.trim()) {
+                hasErrors = true;
+                input.classList.add('is-invalid');
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
+        
+        if (hasErrors) {
+            e.preventDefault();
+            alert('Please specify destination desks for all moves.');
+        }
+    });
+});
+</script>
+{% endblock %}

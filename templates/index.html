@@ -1,0 +1,362 @@
+## index.html - Dashboard page
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Telephony DDI Management{% endblock %}
+
+{% block header %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase">DDI Numbers</h6>
+                        <h1 class="display-4">{{ ddi_count }}</h1>
+                    </div>
+                    <i class="fas fa-phone fa-3x"></i>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a href="{{ url_for('ddi_list') }}" class="text-white">View Details</a>
+                <i class="fas fa-angle-right text-white"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase">Spare Numbers</h6>
+                        <h1 class="display-4">{{ spare_count }}</h1>
+                    </div>
+                    <i class="fas fa-check-circle fa-3x"></i>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a href="{{ url_for('ddi_list') }}?status=Spare" class="text-white">View Details</a>
+                <i class="fas fa-angle-right text-white"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase">Private Wires</h6>
+                        <h1 class="display-4">{{ pw_count }}</h1>
+                    </div>
+                    <i class="fas fa-plug fa-3x"></i>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a href="{{ url_for('pw_list') }}" class="text-white">View Details</a>
+                <i class="fas fa-angle-right text-white"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-danger text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase">Turrets</h6>
+                        <h1 class="display-4">{{ turret_count }}</h1>
+                    </div>
+                    <i class="fas fa-desktop fa-3x"></i>
+                </div>
+            </div>
+            <div class="card-footer d-flex align-items-center justify-content-between">
+                <a href="{{ url_for('turret_list') }}" class="text-white">View Details</a>
+                <i class="fas fa-angle-right text-white"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('calendar_view') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar-alt me-2"></i> Calendar
+                    </a>
+                    <a href="{{ url_for('ddi_request_spare') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-2"></i> Request Spare Number
+                    </a>
+                    {% if current_user.is_admin() %}
+                    <a href="{{ url_for('ddi_import') }}" class="btn btn-secondary">
+                        <i class="fas fa-file-import me-2"></i> Import DDI Numbers
+                    </a>
+                    <a href="{{ url_for('pw_import') }}" class="btn btn-secondary">
+                        <i class="fas fa-file-import me-2"></i> Import Private Wires
+                    </a>
+                    <a href="{{ url_for('turret_import') }}" class="btn btn-secondary">
+                        <i class="fas fa-file-import me-2"></i> Import Dealerboard Turrets
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>System Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th>User:</th>
+                            <td>{{ current_user.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>Role:</th>
+                            <td>{{ current_user.role|capitalize }}</td>
+                        </tr>
+                        <tr>
+                            <th>Current Time:</th>
+                            <td id="current-time"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Servers</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Live Servers</div>
+                        <div class="display-6">{{ servers_count }}</div>
+                    </div>
+                    <i class="fas fa-server fa-2x text-dark"></i>
+                </div>
+                <div class="mt-3">
+                    <div class="text-muted small">EOL within 18 months</div>
+                    <div class="h4 mb-0 {% if servers_eol_18m and servers_eol_18m|int > 0 %}text-danger{% else %}text-muted{% endif %}">
+                        {{ servers_eol_18m }}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('servers_list') }}" class="btn btn-sm btn-outline-secondary">View Servers</a>
+                </div>
+
+                {% if servers_by_os %}
+                <hr>
+                <div class="text-muted small mb-2">By OS</div>
+                <ul class="list-group list-group-flush">
+                    {% for row in servers_by_os[:6] %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ row.os or 'Unknown' }}</span>
+                        <span class="badge bg-secondary rounded-pill">{{ row.count }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                {% if servers_by_application %}
+                <hr>
+                <div class="text-muted small mb-2">By Application</div>
+                <ul class="list-group list-group-flush">
+                    {% for row in servers_by_application[:6] %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ row.application or 'Unknown' }}</span>
+                        <span class="badge bg-secondary rounded-pill">{{ row.count }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Changes Pending</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Approval</div>
+                        <div class="display-6">{{ changes_pending_approval }}</div>
+                    </div>
+                    <i class="fas fa-clipboard-check fa-2x text-primary"></i>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('changes_list') }}?approved_status=No" class="btn btn-sm btn-outline-secondary">View</a>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Regional Approval</div>
+                        <div class="display-6">{{ changes_pending_regional }}</div>
+                    </div>
+                    <i class="fas fa-user-check fa-2x text-secondary"></i>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('changes_list') }}?regional_approval_status=No" class="btn btn-sm btn-outline-secondary">View</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Upcoming CAB Mondays</h6>
+            </div>
+            <div class="card-body">
+                {% if upcoming_cabs %}
+                <ul class="list-group list-group-flush">
+                    {% for row in upcoming_cabs %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('changes_list') }}?cab_date={{ row.cab_date }}">{{ row.cab_date }}</a>
+                        <span class="badge bg-primary rounded-pill">{{ row.count }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-muted">No upcoming CAB dates found.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Incidents (last 30 days)</h6>
+            </div>
+            <div class="card-body">
+                {% if incidents_by_severity_30d %}
+                <ul class="list-group list-group-flush">
+                    {% for row in incidents_by_severity_30d %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Severity {{ row.severity }}</span>
+                        <span class="badge bg-danger rounded-pill">{{ row.count }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div class="mt-3">
+                    <a href="{{ url_for('incidents_list') }}" class="btn btn-sm btn-outline-secondary">View Incidents</a>
+                </div>
+                {% else %}
+                <div class="text-muted">No incidents in last 30 days.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Changes by Region</h6>
+            </div>
+            <div class="card-body">
+                {% if changes_by_region %}
+                <ul class="list-group list-group-flush">
+                    {% for row in changes_by_region[:6] %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('changes_list') }}?region={{ row.region }}">{{ row.region }}</a>
+                        <span class="badge bg-secondary rounded-pill">{{ row.count }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-muted">No change records found.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Recent Changes</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_changes %}
+                <ul class="list-group list-group-flush">
+                    {% for c in recent_changes %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('changes_view', id=c.id, next=url_for('index')) }}">
+                                {{ c.cr_number or 'CR' }} — {{ (c.title or '')[:60] }}
+                            </a>
+                            <span class="text-muted small">{{ c.last_updated.strftime('%Y-%m-%d') if c.last_updated else '' }}</span>
+                        </div>
+                        <div class="small text-muted">{{ c.region or '-' }} · {{ c.status or '-' }} · {{ c.technology or '-' }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-muted">No recent changes.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">Recent Incidents</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_incidents %}
+                <ul class="list-group list-group-flush">
+                    {% for i in recent_incidents %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('incidents_view', id=i.id, next=url_for('index')) }}">
+                                {{ i.incident_number or 'INC' }} — {{ (i.small_title or '')[:60] }}
+                            </a>
+                            <span class="text-muted small">{{ i.last_updated.strftime('%Y-%m-%d') if i.last_updated else '' }}</span>
+                        </div>
+                        <div class="small text-muted">{{ i.region or '-' }} · Sev {{ i.severity or '-' }} · {{ i.technology or '-' }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-muted">No recent incidents.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function updateTime() {
+        const now = new Date();
+        document.getElementById('current-time').textContent = now.toLocaleString();
+    }
+    
+    updateTime();
+    setInterval(updateTime, 1000);
+</script>
+{% endblock %}

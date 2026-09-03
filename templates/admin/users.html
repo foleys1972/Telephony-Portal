@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users - Telephony Management{% endblock %}
+
+{% block header %}Manage Users{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ url_for('add_user') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-user-plus me-1"></i> Add User
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Users List</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Change Approver</th>
+                        <th>Regional Approver</th>
+                        <th>Global Service Approver</th>
+                        <th>Turret Move Approver</th>
+                        <th>Turret Move Executor</th>
+                        <th>Turret Moves Import</th>
+                        <th>Turret Moves Export</th>
+                        <th>Private Wire Import</th>
+                        <th>Private Wire Export</th>
+                        <th>Status</th>
+                        <th>Last Activity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="{% if not user.is_active %}table-secondary{% endif %}">
+                        <td>{{ user.id }}</td>
+                        <td>
+                            <strong>{{ user.username }}</strong>
+                            {% if user.id == current_user.id %}
+                            <span class="badge bg-info ms-2">You</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.name or '-' }}</td>
+                        <td>
+                            <span class="badge {% if user.role == 'admin' %}bg-danger{% else %}bg-primary{% endif %}">
+                                {{ user.role|capitalize }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if user.can_approve_changes %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_change_approver', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Change Approver flag to {{ 'No' if user.can_approve_changes else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Change Approver">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.can_provide_regional_approval %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_regional_approver', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Regional Approver flag to {{ 'No' if user.can_provide_regional_approval else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Regional Approver">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.can_approve_global_service %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_global_service_approver', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Global Service Approver flag to {{ 'No' if user.can_approve_global_service else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Global Service Approver">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.can_approve_turret_moves %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_turret_move_approver', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Turret Move Approver flag to {{ 'No' if user.can_approve_turret_moves else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Turret Move Approver">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.can_execute_turret_moves %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_turret_move_executor', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Turret Move Executor flag to {{ 'No' if user.can_execute_turret_moves else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Turret Move Executor">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.can_import_turret_moves %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_turret_move_import', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Turret Moves Import flag to {{ 'No' if user.can_import_turret_moves else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Turret Moves Import">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.can_export_turret_moves %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_turret_move_export', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Turret Moves Export flag to {{ 'No' if user.can_export_turret_moves else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Turret Moves Export">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.can_import_private_wires %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_private_wire_import', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Private Wire Import flag to {{ 'No' if user.can_import_private_wires else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Private Wire Import">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.can_export_private_wires %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                            <form method="post" action="{{ url_for('toggle_private_wire_export', user_id=user.id) }}" class="d-inline ms-2"
+                                  {% if user.id == current_user.id %}onsubmit="return confirm('Set your own Private Wire Export flag to {{ 'No' if user.can_export_private_wires else 'Yes' }}?');"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-primary" title="Toggle Private Wire Export">
+                                    Toggle
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Disabled</span>
+                            {% if user.disabled_date %}
+                            <br><small class="text-muted">
+                                Disabled {{ user.disabled_date.strftime('%Y-%m-%d') }} by {{ user.disabled_by }}
+                            </small>
+                            {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                            {% if user.last_activity %}
+                            <span class="text-muted">{{ user.last_activity.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                            {% else %}
+                            <span class="text-muted">Never</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">Disabled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <!-- Edit/Reset Password Button -->
+                                <button type="button" class="btn btn-sm btn-primary" 
+                                        data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}"
+                                        title="Edit & Reset Password">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                
+                                {% if user.id != current_user.id %}
+                                <!-- Disable/Enable Button -->
+                                {% if user.is_active %}
+                                <button type="button" class="btn btn-sm btn-warning" 
+                                        data-bs-toggle="modal" data-bs-target="#disableUserModal{{ user.id }}"
+                                        title="Disable User">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                                {% else %}
+                                <form method="post" action="{{ url_for('enable_user', user_id=user.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Enable User">
+                                        <i class="fas fa-user-check"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                
+                                <!-- Delete Button -->
+                                <button type="button" class="btn btn-sm btn-danger" 
+                                        data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}"
+                                        title="Delete User">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% else %}
+                                <!-- Disabled buttons for current user -->
+                                <button type="button" class="btn btn-sm btn-secondary" disabled title="Cannot disable yourself">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary" disabled title="Cannot delete yourself">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Edit User Modal (includes password reset) -->
+                    <div class="modal fade" id="editUserModal{{ user.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit User: {{ user.username }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Edit User:</strong> Update profile fields and/or reset password for {{ user.username }}.
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Username</label>
+                                        <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                                        <div class="form-text">Username cannot be changed</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Role</label>
+                                        <input type="text" class="form-control" value="{{ user.role|capitalize }}" disabled>
+                                        <div class="form-text">Role can be changed by editing the database directly</div>
+                                    </div>
+
+                                    <hr>
+                                    <h6 class="mb-3">Profile</h6>
+                                    <form action="{{ url_for('update_user', user_id=user.id) }}" method="post" class="mb-3">
+                                        <div class="mb-2">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" class="form-control" name="name" value="{{ user.name or '' }}" placeholder="Full name">
+                                        </div>
+                                        <div class="d-flex justify-content-end">
+                                            <button type="submit" class="btn btn-outline-primary">Save Name</button>
+                                        </div>
+                                    </form>
+
+                                    <hr>
+                                    <h6 class="mb-3">Reset Password</h6>
+                                    <form action="{{ url_for('reset_user_password', user_id=user.id) }}" method="post">
+                                        <div class="mb-3">
+                                            <label for="new_password{{ user.id }}" class="form-label">New Password</label>
+                                            <input type="password" class="form-control" id="new_password{{ user.id }}"
+                                                   name="new_password" required minlength="6"
+                                                   placeholder="Enter new password">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="confirm_password{{ user.id }}" class="form-label">Confirm Password</label>
+                                            <input type="password" class="form-control" id="confirm_password{{ user.id }}"
+                                                   name="confirm_password" required minlength="6"
+                                                   placeholder="Confirm new password">
+                                        </div>
+                                        <div class="d-flex justify-content-end">
+                                            <button type="submit" class="btn btn-primary">Reset Password</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if user.id != current_user.id %}
+                    <!-- Disable User Modal -->
+                    {% if user.is_active %}
+                    <div class="modal fade" id="disableUserModal{{ user.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Disable User: {{ user.username }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form action="{{ url_for('disable_user', user_id=user.id) }}" method="post">
+                                    <div class="modal-body">
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            This will prevent the user from logging in. They can be re-enabled later.
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="disable_reason{{ user.id }}" class="form-label">Reason for disabling</label>
+                                            <textarea class="form-control" id="disable_reason{{ user.id }}" 
+                                                      name="disable_reason" rows="3" 
+                                                      placeholder="Optional reason for disabling this user..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-warning">Disable User</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Delete User Modal -->
+                    <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Delete User: {{ user.username }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-danger">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>Warning:</strong> This action cannot be undone. The user will be permanently deleted.
+                                    </div>
+                                    <p>Are you sure you want to delete user <strong>{{ user.username }}</strong>?</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-danger">Delete User</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Password confirmation validation
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const newPassword = this.querySelector('input[name="new_password"]');
+            const confirmPassword = this.querySelector('input[name="confirm_password"]');
+            
+            if (newPassword && confirmPassword) {
+                if (newPassword.value !== confirmPassword.value) {
+                    e.preventDefault();
+                    alert('Passwords do not match!');
+                    return false;
+                }
+                
+                if (newPassword.value.length < 6) {
+                    e.preventDefault();
+                    alert('Password must be at least 6 characters long!');
+                    return false;
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

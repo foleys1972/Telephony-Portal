@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Ceased Private Wires - Telephony Management{% endblock %}
+
+{% block header %}Ceased Private Wires{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ url_for('pw_list') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-list me-1"></i> Active Wires
+    </a>
+    {% if current_user.is_admin() or current_user.can_export_private_wires %}
+        <a href="{{ url_for('ceased_wires_export') }}?{{ request.query_string.decode('utf-8') }}" class="btn btn-sm btn-outline-success">
+            <i class="fas fa-file-excel me-1"></i> Export (Excel)
+        </a>
+    {% endif %}
+    {% if current_user.is_admin() or current_user.can_import_private_wires %}
+        <a href="{{ url_for('ceased_wires_import') }}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-upload me-1"></i> Import
+        </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Search</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-8">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search }}" 
+                       placeholder="Search across all fields">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Search</button>
+                <a href="{{ url_for('ceased_wires_list') }}" class="btn btn-secondary ms-2">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Ceased Private Wires List</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="{{ url_for('ceased_wires_list', search=search, sort='record_no', order='asc' if sort == 'record_no' and order == 'desc' else 'desc') }}">
+                                Record No
+                                {% if sort == 'record_no' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('ceased_wires_list', search=search, sort='location', order='asc' if sort == 'location' and order == 'desc' else 'desc') }}">
+                                Location
+                                {% if sort == 'location' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Circuit No</th>
+                        <th>HSBC Main User</th>
+                        <th>Company</th>
+                        <th>
+                            <a href="{{ url_for('ceased_wires_list', search=search, sort='cease_date', order='asc' if sort == 'cease_date' and order == 'desc' else 'desc') }}">
+                                Cease Date
+                                {% if sort == 'cease_date' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Ceased By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pw in ceased_wires.items %}
+                    <tr>
+                        <td>{{ pw.record_no }}</td>
+                        <td>{{ pw.location }}</td>
+                        <td>{{ pw.circuit_no }}</td>
+                        <td>{{ pw.hsbc_main_user }}</td>
+                        <td>{{ pw.company_name }}</td>
+                        <td>{{ pw.cease_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ pw.ceased_by }}</td>
+                        <td>
+                            <a href="{{ url_for('ceased_wire_view', id=pw.id) }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if ceased_wires.pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if ceased_wires.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('ceased_wires_list', page=ceased_wires.prev_num, search=search, sort=sort, order=order) }}">
+                        Previous
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in ceased_wires.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == ceased_wires.page %}
+                        <li class="page-item active">
+                            <a class="page-link" href="#">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('ceased_wires_list', page=page_num, search=search, sort=sort, order=order) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">...</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if ceased_wires.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('ceased_wires_list', page=ceased_wires.next_num, search=search, sort=sort, order=order) }}">
+                        Next
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Add Dealerboard Turret - Telephony Management{% endblock %}
+
+{% block header %}Add New Dealerboard Turret{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Dealerboard Turret Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="mac_address" class="form-label">MAC Address 1</label>
+                            <input type="text" class="form-control" id="mac_address" name="mac_address" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mac_address_2" class="form-label">MAC Address 2</label>
+                            <input type="text" class="form-control" id="mac_address_2" name="mac_address_2">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="mac_address_3" class="form-label">MAC Address 3</label>
+                            <input type="text" class="form-control" id="mac_address_3" name="mac_address_3">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="mac_address_4" class="form-label">MAC Address 4</label>
+                            <input type="text" class="form-control" id="mac_address_4" name="mac_address_4">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="mac_address_5" class="form-label">MAC Address 5</label>
+                            <input type="text" class="form-control" id="mac_address_5" name="mac_address_5">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="ip_address" class="form-label">IP Address</label>
+                            <input type="text" class="form-control" id="ip_address" name="ip_address">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="serial_number" class="form-label">Serial Number</label>
+                            <input type="text" class="form-control" id="serial_number" name="serial_number">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="dns_hostname" class="form-label">DNS/Hostname</label>
+                            <input type="text" class="form-control" id="dns_hostname" name="dns_hostname">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="switchport_1" class="form-label">Switchport 1</label>
+                            <input type="text" class="form-control" id="switchport_1" name="switchport_1">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="switchport_2" class="form-label">Switchport 2</label>
+                            <input type="text" class="form-control" id="switchport_2" name="switchport_2">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="zone" class="form-label">Zone</label>
+                            <input type="text" class="form-control" id="zone" name="zone">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="firmware_version" class="form-label">Firmware Version</label>
+                            <input type="text" class="form-control" id="firmware_version" name="firmware_version">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="model" class="form-label">Model</label>
+                            <input type="text" class="form-control" id="model" name="model">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="country" class="form-label">Country</label>
+                            <select class="form-select" id="country" name="country">
+                                <option value="">Select Country</option>
+                                {% for country in countries %}
+                                <option value="{{ country }}">{{ country }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="office" class="form-label">Office</label>
+                            <input type="text" class="form-control" id="office" name="office">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="desk_location" class="form-label">Desk Location</label>
+                            <input type="text" class="form-control" id="desk_location" name="desk_location">
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('turret_list') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+
+                    {% if custom_fields %}
+                    <hr>
+                    <h6 class="mb-3">Custom Fields</h6>
+                    <div class="row g-3">
+                        {% for f in custom_fields %}
+                        <div class="col-md-6">
+                            <label class="form-label">{{ f.label }}{% if f.is_required %} <span class="text-danger">*</span>{% endif %}</label>
+                            {% set val = custom_values.get(f.id,'') %}
+                            {% if f.field_type == 'textarea' %}
+                                <textarea class="form-control" name="cf_{{ f.id }}" rows="3" {% if f.is_required %}required{% endif %}>{{ val }}</textarea>
+                            {% elif f.field_type == 'date' %}
+                                <input type="date" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'number' %}
+                                <input type="number" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'url' %}
+                                <input type="url" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% elif f.field_type == 'yesno' %}
+                                <select class="form-select" name="cf_{{ f.id }}" {% if f.is_required %}required{% endif %}>
+                                    <option value="" {% if not val %}selected{% endif %}>Select...</option>
+                                    <option value="Yes" {% if val == 'Yes' %}selected{% endif %}>Yes</option>
+                                    <option value="No" {% if val == 'No' %}selected{% endif %}>No</option>
+                                </select>
+                            {% elif f.field_type == 'dropdown' %}
+                                <select class="form-select" name="cf_{{ f.id }}" {% if f.is_required %}required{% endif %}>
+                                    <option value="" {% if not val %}selected{% endif %}>Select...</option>
+                                    {% for o in f.options_list %}
+                                    <option value="{{ o }}" {% if val == o %}selected{% endif %}>{{ o }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <input type="text" class="form-control" name="cf_{{ f.id }}" value="{{ val }}" {% if f.is_required %}required{% endif %}>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

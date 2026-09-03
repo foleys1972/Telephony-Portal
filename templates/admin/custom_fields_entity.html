@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Custom Fields - {{ entity }}{% endblock %}
+
+{% block header %}Custom Fields: {{ entity }}{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    <a href="{{ url_for('admin_custom_fields') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Add custom field</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('admin_custom_fields_add', entity=entity) }}" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Field Key</label>
+                <input class="form-control" name="field_key" placeholder="e.g. bridge_id" required>
+                <div class="form-text">lowercase letters/numbers/underscore only</div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Label</label>
+                <input class="form-control" name="label" placeholder="Displayed label" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Type</label>
+                <select class="form-select" name="field_type" required>
+                    <option value="text">text</option>
+                    <option value="textarea">textarea</option>
+                    <option value="number">number</option>
+                    <option value="date">date</option>
+                    <option value="yesno">yes/no</option>
+                    <option value="dropdown">dropdown</option>
+                    <option value="url">url</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sort</label>
+                <input type="number" class="form-control" name="sort_order" value="0">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_required" name="is_required" value="1">
+                    <label class="form-check-label" for="is_required">Required</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Dropdown options (one per line, only for type=dropdown)</label>
+                <textarea class="form-control" name="options" rows="3" placeholder="Option 1&#10;Option 2"></textarea>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Existing fields</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Label</th>
+                        <th>Type</th>
+                        <th>Required</th>
+                        <th>Active</th>
+                        <th>Sort</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in fields %}
+                    <tr class="{% if not f.is_active %}table-secondary{% endif %}">
+                        <td>{{ f.field_key }}</td>
+                        <td>{{ f.label }}</td>
+                        <td>{{ f.field_type }}</td>
+                        <td>{% if f.is_required %}Yes{% else %}No{% endif %}</td>
+                        <td>{% if f.is_active %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ f.sort_order }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('admin_custom_fields_toggle', entity=entity, id=f.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    {% if f.is_active %}Disable{% else %}Enable{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

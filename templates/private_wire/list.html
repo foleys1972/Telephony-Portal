@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Private Wires - Telephony Management{% endblock %}
+
+{% block header %}Private Wires{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+    {% if current_user.is_admin() %}
+    <a href="{{ url_for('pw_add') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-plus me-1"></i> Add New
+    </a>
+    {% endif %}
+</div>
+<div class="btn-group me-2">
+    {% if current_user.is_admin() or current_user.can_import_private_wires %}
+    <a href="{{ url_for('pw_import') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-file-import me-1"></i> Import
+    </a>
+    {% endif %}
+    {% if current_user.is_admin() or current_user.can_export_private_wires %}
+    <a href="{{ url_for('pw_export') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-file-export me-1"></i> Export
+    </a>
+    {% endif %}
+</div>
+<div class="btn-group">
+    <a href="{{ url_for('ceased_wires_list') }}" class="btn btn-sm btn-outline-info">
+        <i class="fas fa-archive me-1"></i> Ceased Wires
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search }}"
+                       placeholder="AOR, Location, Circuit, Vendor, Bearer, HSBC user, Company...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Location</label>
+                <select class="form-select" name="location">
+                    <option value="" {% if not location_filter %}selected{% endif %}>All</option>
+                    {% for v in locations %}
+                    <option value="{{ v }}" {% if location_filter == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Vendor</label>
+                <select class="form-select" name="vendor">
+                    <option value="" {% if not vendor_filter %}selected{% endif %}>All</option>
+                    {% for v in vendors %}
+                    <option value="{{ v }}" {% if vendor_filter == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Bearer</label>
+                <select class="form-select" name="bearer_no">
+                    <option value="" {% if not bearer_filter %}selected{% endif %}>All</option>
+                    {% for v in bearers %}
+                    <option value="{{ v }}" {% if bearer_filter == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Apply</button>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <a href="{{ url_for('pw_list') }}" class="btn btn-secondary w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Private Wires List</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="{{ url_for('pw_list', search=search, location=location_filter, vendor=vendor_filter, bearer_no=bearer_filter, sort='aor', order='asc' if sort == 'aor' and order == 'desc' else 'desc') }}">
+                                AOR
+                                {% if sort == 'aor' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('pw_list', search=search, location=location_filter, vendor=vendor_filter, bearer_no=bearer_filter, sort='location', order='asc' if sort == 'location' and order == 'desc' else 'desc') }}">
+                                Location
+                                {% if sort == 'location' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('pw_list', search=search, location=location_filter, vendor=vendor_filter, bearer_no=bearer_filter, sort='circuit_no', order='asc' if sort == 'circuit_no' and order == 'desc' else 'desc') }}">
+                                Circuit No
+                                {% if sort == 'circuit_no' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('pw_list', search=search, location=location_filter, vendor=vendor_filter, bearer_no=bearer_filter, sort='line_label', order='asc' if sort == 'line_label' and order == 'desc' else 'desc') }}">
+                                Line Label
+                                {% if sort == 'line_label' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>HSBC User</th>
+                        <th>Company</th>
+                        <th>
+                            <a href="{{ url_for('pw_list', search=search, location=location_filter, vendor=vendor_filter, bearer_no=bearer_filter, sort='last_updated', order='asc' if sort == 'last_updated' and order == 'desc' else 'desc') }}">
+                                Last Updated
+                                {% if sort == 'last_updated' %}
+                                <i class="fas fa-sort-{{ 'down' if order == 'asc' else 'up' }}"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th style="min-width: 220px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pw in private_wires.items %}
+                    <tr>
+                        <td>
+                            <strong>{{ pw.aor or pw.aor_number or 'N/A' }}</strong>
+                            {% if pw.record_no %}
+                            <br><small class="text-muted">Record No: {{ pw.record_no }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ pw.location }}</td>
+                        <td>{{ pw.circuit_no or '-' }}</td>
+                        <td>{{ pw.line_label or '-' }}</td>
+                        <td>{{ pw.hsbc_main_user or '-' }}</td>
+                        <td>{{ pw.company_name or '-' }}</td>
+                        <td>{{ pw.last_updated.strftime('%Y-%m-%d %H:%M') if pw.last_updated else '-' }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('pw_view', id=pw.id) }}" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.is_admin() %}
+                                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('pw_edit', id=pw.id) }}" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                {% if current_user.is_admin() %}
+                                <a class="btn btn-sm btn-outline-danger" href="{{ url_for('pw_cease', id=pw.id) }}" title="Cease">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if private_wires.pages > 1 %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if private_wires.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('pw_list', page=private_wires.prev_num, search=search, location=location_filter, vendor=vendor_filter, bearer_no=bearer_filter, sort=sort, order=order) }}">
+                        Previous
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in private_wires.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == private_wires.page %}
+                        <li class="page-item active">
+                            <a class="page-link" href="#">{{ page_num }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('pw_list', page=page_num, search=search, location=location_filter, vendor=vendor_filter, bearer_no=bearer_filter, sort=sort, order=order) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">...</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if private_wires.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('pw_list', page=private_wires.next_num, search=search, location=location_filter, vendor=vendor_filter, bearer_no=bearer_filter, sort=sort, order=order) }}">
+                        Next
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

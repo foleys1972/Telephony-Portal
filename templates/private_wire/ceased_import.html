@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Import Ceased Private Wires - Telephony Management{% endblock %}
+
+{% block header %}Import Ceased Private Wires{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Ceased Private Wires from CSV</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Upload a CSV file to import ceased private wires. The file should have the following columns:
+                </p>
+                
+                <ul>
+                    <li><strong>Record No</strong> - Unique identifier</li>
+                    <li><strong>AOR Number</strong> - AOR number</li>
+                    <li><strong>Port Number</strong> - Port number</li>
+                    <li><strong>Channel Number</strong> - Channel number</li>
+                    <li><strong>Location</strong> - Location information</li>
+                    <li><strong>DC Locale</strong> - Data center locale</li>
+                    <li><strong>Vega Port</strong> - Vega port information</li>
+                    <li><strong>Channel</strong> - Channel information</li>
+                    <li><strong>Bearer No</strong> - Bearer number</li>
+                    <li><strong>Circuit No</strong> - Circuit number</li>
+                    <li><strong>Back up Bearer</strong> - Backup bearer information</li>
+                    <li><strong>Cluster Name</strong> - Cluster name</li>
+                    <li><strong>TPO Name</strong> - TPO name</li>
+                    <li><strong>Vega Hostname</strong> - Vega hostname</li>
+                    <li><strong>Back up Vega GW</strong> - Backup Vega gateway</li>
+                    <li><strong>Vendor</strong> - Vendor information</li>
+                    <li><strong>PW type</strong> - Private wire type</li>
+                    <li><strong>BTT slot</strong> - BTT slot information</li>
+                    <li><strong>AOR</strong> - AOR information</li>
+                    <li><strong>A or B</strong> - A or B designation</li>
+                    <li><strong>Dedicated Country</strong> - Dedicated country</li>
+                    <li><strong>HSBC Main User</strong> - Main user information</li>
+                    <li><strong>Employee ID</strong> - Employee ID</li>
+                    <li><strong>Private / Public</strong> - Private or public designation</li>
+                    <li><strong>Line Label</strong> - Line label</li>
+                    <li><strong>Company name</strong> - Company name</li>
+                    <li><strong>Company Contact</strong> - Company contact person</li>
+                    <li><strong>Company email</strong> - Company email</li>
+                    <li><strong>VR Y / N</strong> - VR designation</li>
+                    <li><strong>SNOW Ref</strong> - SNOW reference number</li>
+                    <li><strong>Cease Date</strong> - Date when wire was ceased</li>
+                    <li><strong>Ceased By</strong> - Username who ceased the wire</li>
+                    <li><strong>Cease Reason</strong> - Reason for ceasing</li>
+                </ul>
+                
+                <p class="text-info">
+                    <i class="fas fa-info-circle"></i>
+                    Existing records will be updated with new information.
+                </p>
+                
+                <form method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">CSV File</label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".csv" required>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('ceased_wires_list') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Import</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

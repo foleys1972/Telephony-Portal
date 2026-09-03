@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}View Change - Telephony Management{% endblock %}
+
+{% block header %}View Change{% endblock %}
+
+{% block page_buttons %}
+<div class="btn-group me-2">
+  <a href="{{ next_url }}" class="btn btn-sm btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i> Back
+  </a>
+</div>
+<div class="btn-group me-2">
+  <a href="{{ url_for('changes_edit', id=change.id, next=next_url) }}" class="btn btn-sm btn-primary">
+    <i class="fas fa-edit me-1"></i> Edit
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-10">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Change Details</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-3">Region</dt><dd class="col-sm-9">{{ change.region or '-' }}</dd>
+          <dt class="col-sm-3">CR#</dt><dd class="col-sm-9">{{ change.cr_number or '-' }}</dd>
+          <dt class="col-sm-3">Title</dt><dd class="col-sm-9">{{ change.title or '-' }}</dd>
+          <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ change.status or '-' }}</dd>
+          <dt class="col-sm-3">Technology</dt><dd class="col-sm-9">{{ change.technology or '-' }}</dd>
+          <dt class="col-sm-3">Change Category</dt><dd class="col-sm-9">{{ change.change_category or '-' }}</dd>
+          <dt class="col-sm-3">Risk Level</dt><dd class="col-sm-9">{{ change.change_risk_level or '-' }}</dd>
+          <dt class="col-sm-3">Start Date</dt><dd class="col-sm-9">{{ change.start_date.strftime('%Y-%m-%d') if change.start_date else '-' }}</dd>
+          <dt class="col-sm-3">CAB Date</dt><dd class="col-sm-9">{{ change.cab_date.strftime('%Y-%m-%d') if change.cab_date else '-' }}</dd>
+          <dt class="col-sm-3">SNOW Link</dt>
+          <dd class="col-sm-9">
+            {% if change.snow_link %}
+              <a href="{{ change.snow_link }}">{{ change.snow_link }}</a>
+            {% else %}
+              -
+            {% endif %}
+          </dd>
+          <dt class="col-sm-3">BAU/Project</dt><dd class="col-sm-9">{{ change.bau_project or '-' }}</dd>
+          <dt class="col-sm-3">Raised By</dt><dd class="col-sm-9">{{ change.raised_by or '-' }}</dd>
+          <dt class="col-sm-3">Tech Lead</dt><dd class="col-sm-9">{{ change.tech_lead or '-' }}</dd>
+          <dt class="col-sm-3">COO Update</dt><dd class="col-sm-9">{{ change.coo_update or '-' }}</dd>
+          <dt class="col-sm-3">Global Service Approval</dt><dd class="col-sm-9">{{ change.global_service_approval or '-' }}</dd>
+          <dt class="col-sm-3">Regional Approval</dt><dd class="col-sm-9">{{ change.regional_approval_status or '-' }}</dd>
+          <dt class="col-sm-3">Regional Approver Name</dt><dd class="col-sm-9">{{ change.regional_approver_name or '-' }}</dd>
+          <dt class="col-sm-3">Approved Status</dt><dd class="col-sm-9">{{ change.approved_status or ('Yes' if change.approved else 'No') }}</dd>
+          <dt class="col-sm-3">Approved By</dt><dd class="col-sm-9">{{ change.approved_by or '-' }}</dd>
+          <dt class="col-sm-3">ICE Sent</dt>
+          <dd class="col-sm-9">
+            {% if change.ice_sent is none %}N/A{% elif change.ice_sent %}Yes{% else %}No{% endif %}
+          </dd>
+          <dt class="col-sm-3">ICE Approved</dt>
+          <dd class="col-sm-9">
+            {% if change.ice_approved is none %}N/A{% elif change.ice_approved %}Yes{% else %}No{% endif %}
+          </dd>
+          <dt class="col-sm-3">Regular Change</dt><dd class="col-sm-9">{% if change.regular_change %}Yes{% else %}No{% endif %}</dd>
+          <dt class="col-sm-3">RTC CAB</dt><dd class="col-sm-9">{% if change.rtc_cab %}Yes{% else %}No{% endif %}</dd>
+          <dt class="col-sm-3">Risk Mitigation</dt><dd class="col-sm-9"><pre class="mb-0">{{ change.risk_mitigation or '' }}</pre></dd>
+          <dt class="col-sm-3">Comments</dt><dd class="col-sm-9"><pre class="mb-0">{{ change.comments or '' }}</pre></dd>
+          <dt class="col-sm-3">Raised Date/Time</dt><dd class="col-sm-9">{{ change.raised_datetime.strftime('%Y-%m-%d %H:%M:%S') if change.raised_datetime else '-' }}</dd>
+          <dt class="col-sm-3">Date Created</dt><dd class="col-sm-9">{{ change.date_created.strftime('%Y-%m-%d %H:%M:%S') if change.date_created else '-' }}</dd>
+          <dt class="col-sm-3">Last Updated</dt><dd class="col-sm-9">{{ change.last_updated.strftime('%Y-%m-%d %H:%M:%S') if change.last_updated else '-' }}</dd>
+          <dt class="col-sm-3">Last Updated By</dt><dd class="col-sm-9">{{ change.last_updated_by or '-' }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if custom_fields %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Custom Fields</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped mb-0">
+            <thead><tr><th>Field</th><th>Value</th></tr></thead>
+            <tbody>
+              {% for f in custom_fields %}
+              <tr>
+                <td>{{ f.label }}</td>
+                <td>{{ custom_values.get(f.id,'') or '-' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Audit Trail</h5>
+      </div>
+      <div class="card-body">
+        {% if audit_entries %}
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th style="min-width: 170px;">When</th>
+                <th style="min-width: 140px;">Who</th>
+                <th style="min-width: 90px;">Action</th>
+                <th>Summary</th>
+                <th style="min-width: 140px;">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in audit_entries %}
+              {% set a = e.audit %}
+              <tr>
+                <td>{{ a.changed_at.strftime('%Y-%m-%d %H:%M:%S') if a.changed_at else '' }}</td>
+                <td>{{ a.changed_by or '' }}</td>
+                <td>{{ a.action or '' }}</td>
+                <td>{{ a.summary or '' }}</td>
+                <td>
+                  <details>
+                    {% if e.rows %}
+                    <summary>Changes ({{ e.rows|length }})</summary>
+                    <div class="table-responsive mt-2">
+                      <table class="table table-sm table-bordered mb-0">
+                        <thead>
+                          <tr>
+                            <th style="min-width: 90px;">Scope</th>
+                            <th style="min-width: 180px;">Field</th>
+                            <th>Before</th>
+                            <th>After</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for r in e.rows %}
+                          <tr>
+                            <td>{{ r.scope }}</td>
+                            <td>{{ r.field }}</td>
+                            <td>{{ r.before }}</td>
+                            <td>{{ r.after }}</td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                    {% else %}
+                    <summary>View</summary>
+                    <div class="text-muted small mt-2">No field diffs recorded for this entry (snapshot/raw available).</div>
+                    {% endif %}
+
+                    <details class="mt-2">
+                      <summary>Raw</summary>
+                      <pre class="small mb-0">{{ e.raw or '' }}</pre>
+                    </details>
+                  </details>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-muted">No audit entries yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

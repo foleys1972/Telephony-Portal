@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+
+{% block title %}Plan Turret Move - Telephony Management{% endblock %}
+
+{% block header %}Plan Turret Move{% endblock %}
+
+{% block extra_css %}
+<style>
+    .turret-selector {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 15px;
+    }
+    .turret-item {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 10px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    .turret-item:hover {
+        background-color: #f8f9fa;
+    }
+    .turret-item.selected {
+        border-color: #007bff;
+        background-color: #e3f2fd;
+    }
+    .search-box {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="moveForm">
+    <div class="row">
+        <!-- Move Group Details -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Move Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="move_name" class="form-label">Move Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="move_name" name="move_name" required
+                               placeholder="e.g., Q1 2025 Trading Floor Reorganization">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Brief description of the move purpose..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="planned_execution_date" class="form-label">Planned Execution Date</label>
+                        <input type="datetime-local" class="form-control" id="planned_execution_date" 
+                               name="planned_execution_date">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Select turrets below and specify their new locations. 
+                        The move will be saved for later execution.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Selected Turrets Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Selected Turrets
+                        <span class="badge bg-primary ms-2" id="selectedCount">0</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="selectedSummary">
+                        <p class="text-muted">No turrets selected yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Turret Selection -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-desktop me-2"></i>Select Turrets to Move
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="turret-selector">
+                        <div class="search-box">
+                            <div class="row g-2">
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control" id="turretSearch"
+                                           placeholder="Filter by MAC or desk (partial match)">
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select" id="countryFilter">
+                                        <option value="">All Countries</option>
+                                        {% for country in countries %}
+                                        <option value="{{ country }}">{{ country }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="turretList">
+                            {% for turret in turrets %}
+                            <div class="turret-item" data-turret-id="{{ turret.id }}" 
+                                 data-search="{{ ((turret.mac_address or '') + ' ' + (turret.mac_address_2 or '') + ' ' + (turret.mac_address_3 or '') + ' ' + (turret.mac_address_4 or '') + ' ' + (turret.mac_address_5 or '') + ' ' + (turret.desk_location or '') + ' ' + (turret.office or '')).lower() }}"
+                                 data-country="{{ (turret.country or '').lower() }}"
+                                 data-desk="{{ (turret.desk_location or '').lower() }}"
+                                 data-office="{{ (turret.office or '').lower() }}"
+                                 data-mac="{{ (turret.mac_address or '').lower() }}">
+                                <div class="row align-items-center">
+                                    <div class="col-md-1">
+                                        <div class="form-check">
+                                            <input class="form-check-input turret-checkbox" type="checkbox" 
+                                                   name="selected_turrets" value="{{ turret.id }}" 
+                                                   id="turret_{{ turret.id }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-11">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <strong>{{ turret.mac_address }}</strong>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <i class="fas fa-map-marker-alt me-1"></i>
+                                                {{ turret.desk_location or 'No desk assigned' }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <i class="fas fa-building me-1"></i>
+                                                {{ turret.office or 'No office' }} - {{ turret.country or 'No country' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Move Table -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-table me-2"></i>Move Table
+                        <span class="badge bg-primary ms-2" id="selectedCount2">0</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>MAC</th>
+                                    <th>Current Desk</th>
+                                    <th>Country</th>
+                                    <th>To Desk <span class="text-danger">*</span></th>
+                                    <th>To Office</th>
+                                    <th>To Country</th>
+                                    <th>Reason</th>
+                                    <th>Priority</th>
+                                    <th>Net</th>
+                                    <th>Phone</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="selectedTableBody">
+                                <tr id="noSelectionRow">
+                                    <td colspan="11" class="text-muted">Select turrets above to populate this table.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('turret_moves_list') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-success" id="createMoveBtn" disabled>
+                    <i class="fas fa-save me-1"></i>Create Move Group
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.turret-checkbox');
+    const selectedCount = document.getElementById('selectedCount');
+    const selectedCount2 = document.getElementById('selectedCount2');
+    const selectedSummary = document.getElementById('selectedSummary');
+    const createMoveBtn = document.getElementById('createMoveBtn');
+    const turretSearch = document.getElementById('turretSearch');
+    const countryFilter = document.getElementById('countryFilter');
+    const selectedTableBody = document.getElementById('selectedTableBody');
+    const noSelectionRow = document.getElementById('noSelectionRow');
+    
+    // Search functionality
+    function applyTurretFilters() {
+        const searchTerm = (turretSearch.value || '').toLowerCase();
+        const country = (countryFilter.value || '').toLowerCase();
+        const turretItems = document.querySelectorAll('.turret-item');
+
+        turretItems.forEach(item => {
+            const searchData = item.dataset.search || '';
+            const itemCountry = item.dataset.country || '';
+            const matchesSearch = !searchTerm || searchData.includes(searchTerm);
+            const matchesCountry = !country || itemCountry === country;
+            item.style.display = (matchesSearch && matchesCountry) ? 'block' : 'none';
+        });
+    }
+
+    turretSearch.addEventListener('input', applyTurretFilters);
+    countryFilter.addEventListener('change', applyTurretFilters);
+    
+    // Checkbox change handler
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const turretId = this.value;
+            const turretItem = this.closest('.turret-item');
+            
+            if (this.checked) {
+                turretItem.classList.add('selected');
+                addRow(turretId, turretItem);
+            } else {
+                turretItem.classList.remove('selected');
+                removeRow(turretId);
+            }
+            
+            updateSummary();
+        });
+    });
+
+    function addRow(turretId, turretItem) {
+        if (document.getElementById('moveRow_' + turretId)) return;
+
+        const mac = turretItem.querySelector('strong')?.textContent || '';
+        const desk = turretItem.dataset.desk || '';
+        const office = turretItem.dataset.office || '';
+        const country = turretItem.dataset.country || '';
+
+        if (noSelectionRow) noSelectionRow.style.display = 'none';
+
+        const tr = document.createElement('tr');
+        tr.id = 'moveRow_' + turretId;
+        tr.innerHTML = `
+            <td><strong>${mac}</strong></td>
+            <td>${desk || '-'}</td>
+            <td>${country || '-'}</td>
+            <td><input type="text" class="form-control form-control-sm" name="to_desk_${turretId}" required></td>
+            <td><input type="text" class="form-control form-control-sm" name="to_office_${turretId}" value="${office || ''}"></td>
+            <td>
+              <select class="form-select form-select-sm" name="to_country_${turretId}">
+                <option value="">Select</option>
+                ${getCountryOptions(country)}
+              </select>
+            </td>
+            <td><input type="text" class="form-control form-control-sm" name="move_reason_${turretId}"></td>
+            <td>
+              <select class="form-select form-select-sm" name="priority_${turretId}">
+                <option value="Normal">Normal</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </td>
+            <td class="text-center"><input class="form-check-input" type="checkbox" name="network_config_${turretId}" value="1"></td>
+            <td class="text-center"><input class="form-check-input" type="checkbox" name="phone_config_${turretId}" value="1"></td>
+            <td class="text-nowrap">
+              <button type="button" class="btn btn-sm btn-outline-danger" data-remove="${turretId}">Remove</button>
+            </td>
+        `;
+        selectedTableBody.appendChild(tr);
+
+        tr.querySelector('button[data-remove]')?.addEventListener('click', () => {
+            const cb = document.getElementById('turret_' + turretId);
+            if (cb) cb.checked = false;
+            cb?.dispatchEvent(new Event('change'));
+        });
+    }
+
+    function removeRow(turretId) {
+        const tr = document.getElementById('moveRow_' + turretId);
+        if (tr) tr.remove();
+        if (selectedTableBody.querySelectorAll('tr[id^="moveRow_"]').length === 0) {
+            if (noSelectionRow) noSelectionRow.style.display = '';
+        }
+    }
+
+    function getCountryOptions(selectedCountryLower) {
+        const opts = Array.from(countryFilter.options)
+          .map(o => o.value)
+          .filter(v => v);
+        return opts.map(v => {
+          const sel = (v.toLowerCase() === (selectedCountryLower || '').toLowerCase()) ? ' selected' : '';
+          return `<option value="${v}"${sel}>${v}</option>`;
+        }).join('');
+    }
+    
+    function updateSummary() {
+        const checkedBoxes = document.querySelectorAll('.turret-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCount.textContent = count;
+        if (selectedCount2) selectedCount2.textContent = count;
+        
+        if (count === 0) {
+            selectedSummary.innerHTML = '<p class="text-muted">No turrets selected yet.</p>';
+            createMoveBtn.disabled = true;
+        } else {
+            let summaryHtml = '<div class="row g-2">';
+            checkedBoxes.forEach(checkbox => {
+                const turretItem = checkbox.closest('.turret-item');
+                const macAddress = turretItem.querySelector('strong').textContent;
+                summaryHtml += `
+                    <div class="col-12">
+                        <div class="badge bg-primary text-wrap">
+                            ${macAddress}
+                        </div>
+                    </div>
+                `;
+            });
+            summaryHtml += '</div>';
+            selectedSummary.innerHTML = summaryHtml;
+            createMoveBtn.disabled = false;
+        }
+    }
+    
+    // Form submission validation
+    document.getElementById('moveForm').addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('.turret-checkbox:checked');
+        
+        if (checkedBoxes.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one turret to move.');
+            return;
+        }
+        
+        // Validate that all selected turrets have destination desks
+        let hasErrors = false;
+        checkedBoxes.forEach(checkbox => {
+            const turretId = checkbox.value;
+            const deskInput = document.querySelector(`input[name="to_desk_${turretId}"]`);
+            
+            if (!deskInput.value.trim()) {
+                hasErrors = true;
+                deskInput.classList.add('is-invalid');
+            } else {
+                deskInput.classList.remove('is-invalid');
+            }
+        });
+        
+        if (hasErrors) {
+            e.preventDefault();
+            alert('Please specify destination desks for all selected turrets.');
+        }
+    });
+
+    // Init
+    applyTurretFilters();
+});
+</script>
+{% endblock %}
