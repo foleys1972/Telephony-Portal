@@ -32,3 +32,24 @@ dist/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Legacy local copies kept outside the published source tree
+app_bu.py
+app.txt
+output.py
+overview.txt
+simple_init_db.py
+add_cab_lock_table.py
+add_change_approval_fields.py
+add_change_approved_status.py
+add_change_raised_datetime.py
+add_change_regional_approval_fields.py
+add_incidents_table.py
+add_lookup_options_table.py
+add_turret_audit_system.py
+add_turret_mac_fields.py
+add_user_active_column.py
+add_user_change_approver.py
+add_user_must_change_password.py
+migrate_desk_number.py
+update_db.py
